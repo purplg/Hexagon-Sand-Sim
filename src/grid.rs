@@ -22,6 +22,7 @@ impl bevy::prelude::Plugin for Plugin {
         let mut states = StateRegistry::default();
         states.insert("air", Air);
         states.insert("sand", Sand);
+        states.insert("fire", Fire);
         app.insert_resource(states);
         app.init_resource::<CellStates>();
 
@@ -165,6 +166,46 @@ trait CellState {
     }
 }
 
+struct Fire;
+
+impl CellState for Fire {
+    fn tick(&self, center: &Cell, grid: &HexGrid, states: &mut CellStates, cells: &Query<&Cell>) {
+        if rand::random() {
+            if !self.try_swap(
+                center.0,
+                center.neighbor(EdgeDirection::POINTY_TOP_LEFT),
+                grid,
+                states,
+                &cells,
+            ) {
+                self.try_swap(
+                    center.0,
+                    center.neighbor(EdgeDirection::POINTY_TOP_LEFT),
+                    grid,
+                    states,
+                    &cells,
+                );
+            }
+        } else {
+            if !self.try_swap(
+                center.0,
+                center.neighbor(EdgeDirection::POINTY_TOP_RIGHT),
+                grid,
+                states,
+                &cells,
+            ) {
+                self.try_swap(
+                    center.0,
+                    center.neighbor(EdgeDirection::POINTY_TOP_LEFT),
+                    grid,
+                    states,
+                    &cells,
+                );
+            }
+        }
+    }
+}
+
 struct Sand;
 
 impl CellState for Sand {
@@ -233,7 +274,17 @@ fn startup(mut commands: Commands, mut settings: ResMut<HexGrid>, mut states: Re
                 settings.layout.hex_to_world_pos(hex).extend(0.0),
             )),
         });
-        states.set(&hex, if rand::random() { "air" } else { "sand" });
+        let chance: f32 = rand::random();
+        states.set(
+            &hex,
+            if chance < 0.3 {
+                "air"
+            } else if chance < 0.7 {
+                "sand"
+            } else {
+                "fire"
+            },
+        );
         settings.entities.insert(hex, entity.id());
     }
     states.flush();
@@ -333,18 +384,20 @@ fn gizmos(
     let size = hex.layout.hex_size.length() * 0.7;
 
     for (transform, cell) in cells.iter() {
-        // draw.primitive_2d(
-        //     RegularPolygon::new(size, 6),
-        //     transform.translation.xy(),
-        //     0.0,
-        //     Color::RED,
-        // );
-        if let Some(StateId("sand")) = states.get_current(&cell.0) {
+        if states.is_state(cell, "fire") {
             draw.primitive_2d(
                 RegularPolygon::new(size, 6),
                 transform.translation.xy(),
                 0.0,
-                Color::BLUE,
+                Color::RED,
+            );
+        }
+        if states.is_state(cell, "sand") {
+            draw.primitive_2d(
+                RegularPolygon::new(size, 6),
+                transform.translation.xy(),
+                0.0,
+                Color::YELLOW,
             );
         }
     }
