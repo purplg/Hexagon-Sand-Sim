@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 
 use crate::grid::CellStates;
 
-use super::Behavior;
+use super::{Behavior, Set, StateId, StepKind, Swap};
 
 pub struct Fire;
 
@@ -19,5 +19,19 @@ impl Behavior for Fire {
         {
             step.apply(states)
         }
+    }
+
+    fn try_move(from: Hex, direction: EdgeDirection, states: &CellStates) -> Option<StepKind> {
+        let to = from.neighbor(direction);
+
+        if states.is_state(to, StateId::Air) {
+            return Some(StepKind::Swap(Swap { to, from }));
+        } else if states.is_state(to, StateId::Water) {
+            return Some(StepKind::Set(Set {
+                positions: vec![to, from],
+                states: vec![StateId::Steam, StateId::Steam],
+            }));
+        }
+        return None;
     }
 }

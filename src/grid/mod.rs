@@ -2,7 +2,7 @@ mod state;
 pub use state::{Board, Cell, CellStates, EntityMap, NextState};
 
 use crate::{
-    cell::{Air, Behavior, Fire, Sand, StateId},
+    cell::{Air, Behavior, Fire, Sand, StateId, Steam, Water},
     game_state::GameState,
     input::Input,
 };
@@ -23,6 +23,13 @@ impl bevy::prelude::Plugin for Plugin {
                 .run_if(in_state(GameState::Running))
                 .run_if(on_timer(std::time::Duration::from_millis(50))),
         );
+        app.add_systems(
+            Update,
+            sim_system.run_if(
+                in_state(GameState::AcceleratedRunning)
+                    .or_else(in_state(GameState::AcceleratedPaused)),
+            ),
+        );
         app.init_resource::<CellStates>();
         app.init_resource::<EntityMap>();
 
@@ -30,10 +37,10 @@ impl bevy::prelude::Plugin for Plugin {
         app.insert_resource(Board {
             layout: HexLayout {
                 orientation: HexOrientation::Pointy,
-                hex_size: Vec2::new(8.0, 8.0),
+                hex_size: Vec2::ONE * 16.0,
                 ..default()
             },
-            bounds: HexBounds::from_radius(32),
+            bounds: HexBounds::from_radius(16),
         });
     }
 }
@@ -48,10 +55,12 @@ fn startup_system(
     for hex in board.bounds.all_coords() {
         let mut entity = commands.spawn_empty();
         let chance: f32 = rand::random();
-        let state_id = if chance < 0.3 {
+        let state_id = if chance < 0.25 {
             StateId::Sand
-        } else if chance < 0.7 {
+        } else if chance < 0.5 {
             StateId::Fire
+        } else if chance < 0.75 {
+            StateId::Water
         } else {
             StateId::Air
         };
@@ -68,6 +77,8 @@ fn sim_system(cells: Query<&Cell>, mut states: ResMut<CellStates>) {
             Some(StateId::Air) => Air::tick(cell.0, &mut states),
             Some(StateId::Fire) => Fire::tick(cell.0, &mut states),
             Some(StateId::Sand) => Sand::tick(cell.0, &mut states),
+            Some(StateId::Water) => Water::tick(cell.0, &mut states),
+            Some(StateId::Steam) => Steam::tick(cell.0, &mut states),
             None => {}
         }
     }
@@ -78,6 +89,14 @@ fn sim_system(cells: Query<&Cell>, mut states: ResMut<CellStates>) {
 fn step_system(query: Query<&ActionState<Input>>, cells: Query<&Cell>, states: ResMut<CellStates>) {
     let query = query.single();
     if query.just_pressed(&Input::Step) {
+        sim_system(cells, states);
+    }
+}
+
+/// System to run the system while a button is being held.
+fn fast_system(query: Query<&ActionState<Input>>, cells: Query<&Cell>, states: ResMut<CellStates>) {
+    let query = query.single();
+    if query.pressed(&Input::Fast) {
         sim_system(cells, states);
     }
 }
@@ -105,7 +124,7 @@ fn render_system(
                     red: 1.0,
                     green: 1.0,
                     blue: 1.0,
-                    alpha: 0.01,
+                    alpha: 0.00,
                 },
                 StateId::Fire => Color::Rgba {
                     red: 1.0,
@@ -117,6 +136,18 @@ fn render_system(
                     red: 1.0,
                     green: 1.0,
                     blue: 0.0,
+                    alpha: 1.0,
+                },
+                StateId::Water => Color::Rgba {
+                    red: 0.0,
+                    green: 0.0,
+                    blue: 1.0,
+                    alpha: 1.0,
+                },
+                StateId::Steam => Color::Rgba {
+                    red: 1.0,
+                    green: 1.0,
+                    blue: 1.0,
                     alpha: 1.0,
                 },
             },

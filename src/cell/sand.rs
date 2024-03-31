@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 
 use crate::grid::CellStates;
 
-use super::Behavior;
+use super::{Behavior, StateId, StepKind, Swap};
 
 pub struct Sand;
 
@@ -19,5 +19,15 @@ impl Behavior for Sand {
         {
             step.apply(states)
         }
+    }
+
+    fn try_move(from: Hex, direction: EdgeDirection, states: &CellStates) -> Option<StepKind> {
+        let to = from.neighbor(direction);
+
+        if states.is_state(to, [StateId::Air, StateId::Water]) {
+            return Some(StepKind::Swap(Swap { to, from }));
+        }
+
+        return None;
     }
 }

@@ -15,6 +15,7 @@ pub enum Input {
     Info,
     PlayPause,
     Step,
+    Fast,
 }
 
 impl bevy::prelude::Plugin for Plugin {
@@ -33,8 +34,9 @@ fn startup(mut commands: Commands) {
         ])
         .insert_multiple([
             (Input::Quit, KeyCode::Escape),
-            (Input::PlayPause, KeyCode::Space),
+            (Input::PlayPause, KeyCode::Tab),
             (Input::Step, KeyCode::Enter),
+            (Input::Fast, KeyCode::Space),
         ])
         .build(),
     ));

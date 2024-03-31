@@ -14,6 +14,8 @@ impl bevy::prelude::Plugin for Plugin {
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GameState {
+    AcceleratedRunning,
+    AcceleratedPaused,
     Running,
     Paused,
 }
@@ -29,6 +31,21 @@ fn input(
         match state.get() {
             GameState::Running => next_state.set(GameState::Paused),
             GameState::Paused => next_state.set(GameState::Running),
+            _ => {}
+        };
+    }
+    if query.just_pressed(&Input::Fast) {
+        match state.get() {
+            GameState::AcceleratedPaused => {}
+            GameState::AcceleratedRunning => {}
+            GameState::Running => next_state.set(GameState::AcceleratedRunning),
+            GameState::Paused => next_state.set(GameState::AcceleratedPaused),
+        };
+    } else if query.just_released(&Input::Fast) {
+        match state.get() {
+            GameState::AcceleratedPaused => next_state.set(GameState::Paused),
+            GameState::AcceleratedRunning => next_state.set(GameState::Running),
+            _ => {}
         };
     }
 

@@ -65,16 +65,30 @@ impl CellStates {
         }
     }
 
-    /// Return `true` if a position has a specific state.
-    pub fn is_state(&self, hex: Hex, other_id: StateId) -> bool {
+    /// Return `true` if a `hex` has one of `state`.
+    pub fn is_state(&self, hex: Hex, state: impl Into<Vec<StateId>>) -> bool {
         self.get_next(hex)
-            .map(|id| *id == other_id)
-            .unwrap_or_default()
+            .map(|id| {
+                state
+                    .into()
+                    .into_iter()
+                    .find(|other_id| id == other_id)
+                    .is_some()
+            })
+            .unwrap_or(false)
     }
 
     /// Set the future state of a cell.
-    pub fn set(&mut self, hex: Hex, next_state: NextState) -> bool {
-        self.next.try_insert(hex, next_state).is_ok()
+    pub fn set(&mut self, hex: Hex, next_state: NextState) {
+        self.next.insert(hex, next_state);
+    }
+
+    pub fn is_set(&mut self, hex: Hex) -> bool {
+        self.next.contains_key(&hex)
+    }
+
+    pub fn any_set<'a>(&mut self, hexs: impl IntoIterator<Item = &'a Hex>) -> bool {
+        hexs.into_iter().any(|hex| self.is_set(*hex))
     }
 
     /// Apply all changes in [`Self::next`] to [`Self::current`].
