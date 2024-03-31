@@ -19,7 +19,12 @@ impl bevy::prelude::Plugin for Plugin {
                 .run_if(in_state(GameState::Running))
                 .run_if(on_timer(std::time::Duration::from_millis(200))),
         );
-        app.init_resource::<Tracker>();
+        let mut states = StateRegistry::default();
+        states.insert("air", Air);
+        states.insert("sand", Sand);
+        app.insert_resource(states);
+        app.init_resource::<CellStates>();
+
         app.insert_resource(HexGrid {
             layout: HexLayout {
                 orientation: HexOrientation::Pointy,
@@ -29,6 +34,62 @@ impl bevy::prelude::Plugin for Plugin {
             bounds: HexBounds::from_radius(16),
             entities: Default::default(),
         });
+    }
+}
+
+#[derive(Resource, Default)]
+struct CellStates {
+    current: HashMap<Hex, StateId>,
+    next: HashMap<Hex, StateId>,
+}
+
+impl CellStates {
+    fn get_current(&self, hex: &Hex) -> Option<&StateId> {
+        self.current.get(hex)
+    }
+
+    fn get_next(&self, hex: &Hex) -> Option<&StateId> {
+        self.next.get(hex).or_else(|| self.get_current(hex))
+    }
+
+    fn is_state(&self, hex: &Hex, state_id: impl Into<StateId>) -> bool {
+        self.get_next(hex)
+            .is_some_and(|next| *next == state_id.into())
+    }
+
+    fn set(&mut self, hex: &Hex, state_id: impl Into<StateId>) -> Option<StateId> {
+        self.next.insert(*hex, state_id.into())
+    }
+
+    fn flush(&mut self) {
+        for (k, v) in self.next.drain() {
+            self.current.insert(k, v);
+        }
+    }
+}
+
+#[derive(Resource)]
+struct StateRegistry {
+    inner: HashMap<StateId, Box<dyn CellState + Send + Sync>>,
+    default: Box<dyn CellState + Send + Sync>,
+}
+
+impl Default for StateRegistry {
+    fn default() -> Self {
+        Self {
+            inner: Default::default(),
+            default: Box::new(Air),
+        }
+    }
+}
+
+impl StateRegistry {
+    fn get(&self, id: impl Into<StateId>) -> &Box<dyn CellState + Send + Sync> {
+        self.inner.get(&id.into()).unwrap_or(&self.default)
+    }
+
+    fn insert(&mut self, id: &'static str, state: impl CellState + Send + Sync + 'static) {
+        self.inner.insert(StateId(id), Box::new(state));
     }
 }
 
@@ -52,22 +113,111 @@ struct HexGrid {
     bounds: HexBounds,
 }
 
-#[derive(Component)]
-struct Cell {
-    hex: Hex,
-    state: CellState,
+#[derive(Deref, DerefMut, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct StateId(&'static str);
+
+impl From<&'static str> for StateId {
+    fn from(value: &'static str) -> Self {
+        StateId(value)
+    }
 }
 
-#[derive(Component)]
-struct Next(CellState);
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CellState {
-    On,
-    Off,
+impl From<&StateId> for StateId {
+    fn from(value: &StateId) -> Self {
+        *value
+    }
 }
 
-fn startup(mut commands: Commands, mut settings: ResMut<HexGrid>) {
+trait CellState {
+    fn tick(
+        &self,
+        _center: &Cell,
+        _grid: &HexGrid,
+        _states: &mut CellStates,
+        _cells: &Query<&Cell>,
+    ) {
+    }
+
+    fn try_swap(
+        &self,
+        from: Hex,
+        to: Hex,
+        grid: &HexGrid,
+        states: &mut CellStates,
+        cells: &Query<&Cell>,
+    ) -> bool {
+        let Some(entity) = grid.entities.get(&to) else {
+            return false;
+        };
+
+        let Some(to) = cells.get(*entity).ok() else {
+            return false;
+        };
+
+        if !states.is_state(to, "air") {
+            return false;
+        }
+
+        let from_state = states.get_current(&from).unwrap().clone();
+        states.set(&to.0, from_state);
+        states.set(&from, "air");
+        return true;
+    }
+}
+
+struct Sand;
+
+impl CellState for Sand {
+    fn tick(&self, center: &Cell, grid: &HexGrid, states: &mut CellStates, cells: &Query<&Cell>) {
+        if rand::random() {
+            if !self.try_swap(
+                center.0,
+                center.neighbor(EdgeDirection::POINTY_BOTTOM_LEFT),
+                grid,
+                states,
+                &cells,
+            ) {
+                self.try_swap(
+                    center.0,
+                    center.neighbor(EdgeDirection::POINTY_BOTTOM_LEFT),
+                    grid,
+                    states,
+                    &cells,
+                );
+            }
+        } else {
+            if !self.try_swap(
+                center.0,
+                center.neighbor(EdgeDirection::POINTY_BOTTOM_RIGHT),
+                grid,
+                states,
+                &cells,
+            ) {
+                self.try_swap(
+                    center.0,
+                    center.neighbor(EdgeDirection::POINTY_BOTTOM_LEFT),
+                    grid,
+                    states,
+                    &cells,
+                );
+            }
+        }
+    }
+}
+
+struct Air;
+impl CellState for Air {}
+
+#[derive(Component, Deref)]
+struct Cell(Hex);
+
+#[derive(Bundle)]
+struct CellBundle {
+    cell: Cell,
+    transform: TransformBundle,
+}
+
+fn startup(mut commands: Commands, mut settings: ResMut<HexGrid>, mut states: ResMut<CellStates>) {
     let mut input_map = InputMap::new([
         (Action::Select, MouseButton::Right),
         (Action::Info, MouseButton::Left),
@@ -77,41 +227,23 @@ fn startup(mut commands: Commands, mut settings: ResMut<HexGrid>) {
 
     for hex in settings.bounds.all_coords() {
         let mut entity = commands.spawn_empty();
-        entity.insert(Cell {
-            hex,
-            state: if rand::random() {
-                CellState::On
-            } else {
-                CellState::Off
-            },
+        entity.insert(CellBundle {
+            cell: Cell(hex),
+            transform: TransformBundle::from_transform(Transform::from_translation(
+                settings.layout.hex_to_world_pos(hex).extend(0.0),
+            )),
         });
-        entity.insert(TransformBundle::from_transform(
-            Transform::from_translation(settings.layout.hex_to_world_pos(hex).extend(0.0)),
-        ));
+        states.set(&hex, if rand::random() { "air" } else { "sand" });
         settings.entities.insert(hex, entity.id());
     }
-}
-
-fn live_neighbors(pos: Hex, grid: &HexGrid, cells: &Query<(Entity, &Cell)>) -> Vec<Hex> {
-    HexBounds::new(pos, 1)
-        .all_coords()
-        // Ignore self
-        .filter(|hex| *hex != pos)
-        // hex -> entity
-        .filter_map(|hex| grid.entities.get(&hex))
-        // entity -> cell
-        .filter_map(|entity| cells.get(*entity).ok())
-        // CellState::On
-        .filter(|(_entity, cell)| cell.state == CellState::On)
-        // cell -> hex
-        .map(|(_entity, cell)| cell.hex)
-        .collect()
+    states.flush();
 }
 
 fn info(
     query: Query<&ActionState<Action>>,
     grid: Res<HexGrid>,
-    cells: Query<(Entity, &Cell)>,
+    cells: Query<&Cell>,
+    states: Res<CellStates>,
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -125,15 +257,21 @@ fn info(
             .map(|ray| ray.origin.truncate())
         {
             let cell_hex = grid.layout.world_pos_to_hex(world_position);
-            let on_count = live_neighbors(cell_hex, &grid, &cells).len();
-            println!("on_count: {:?}", on_count);
+            let Some(entity) = grid.entities.get(&cell_hex) else {
+                return;
+            };
+            let Ok(cell) = cells.get(*entity) else {
+                return;
+            };
+            println!("cell.state_id: {:?}", states.get_current(&cell.0));
         }
     }
 }
+
 fn select(
-    mut commands: Commands,
     query: Query<&ActionState<Action>>,
     grid: Res<HexGrid>,
+    mut states: ResMut<CellStates>,
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -147,9 +285,7 @@ fn select(
             .map(|ray| ray.origin.truncate())
         {
             let cell_hex = grid.layout.world_pos_to_hex(world_position);
-            if let Some(entity) = grid.entities.get(&cell_hex) {
-                commands.entity(*entity).insert(Next(CellState::On));
-            }
+            states.set(&cell_hex, "sand");
         }
     }
 }
@@ -168,74 +304,44 @@ fn play_pause(
     }
 }
 
-fn post_sim(mut commands: Commands, mut cells: Query<(Entity, &mut Cell, &Next)>) {
-    for (entity, mut cell, next) in cells.iter_mut() {
-        cell.state = next.0;
-        commands.entity(entity).remove::<Next>();
-    }
-}
-
-#[derive(Default, Resource)]
-struct Tracker {
-    under: usize,
-    over: usize,
-    born: usize,
-}
-
-impl std::fmt::Debug for Tracker {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "net {}, under {}, over {}, born {}",
-            self.born as isize - (self.under + self.over) as isize,
-            self.under,
-            self.over,
-            self.born,
-        )
-    }
-}
-
 fn sim(
-    mut commands: Commands,
     grid: Res<HexGrid>,
-    cells: Query<(Entity, &Cell)>,
-    mut tracker: ResMut<Tracker>,
+    state_ids: Res<StateRegistry>,
+    cells: Query<&Cell>,
+    mut states: ResMut<CellStates>,
 ) {
-    for (entity, cell) in cells.iter() {
-        let on_count = live_neighbors(cell.hex, &grid, &cells).len();
-
-        if cell.state == CellState::On {
-            if on_count < 3 {
-                tracker.under += 1;
-                commands.entity(entity).insert(Next(CellState::Off));
-            } else if on_count > 4 {
-                tracker.over += 1;
-                commands.entity(entity).insert(Next(CellState::Off));
-            }
-        } else {
-            if on_count > 1 && on_count < 4 {
-                tracker.born += 1;
-                commands.entity(entity).insert(Next(CellState::On));
-            }
-        }
+    for cell in cells.iter() {
+        let Some(state_id) = states.get_current(&cell.0) else {
+            continue;
+        };
+        let state = state_ids.get(state_id);
+        state.tick(cell, &grid, &mut states, &cells);
     }
-    println!("tracker: {:?}", *tracker);
 }
 
-fn gizmos(mut draw: Gizmos, hex: Res<HexGrid>, cells: Query<(&Transform, &Cell)>) {
+fn post_sim(mut states: ResMut<CellStates>) {
+    states.flush();
+}
+
+fn gizmos(
+    mut draw: Gizmos,
+    hex: Res<HexGrid>,
+    cells: Query<(&Transform, &Cell)>,
+    states: Res<CellStates>,
+) {
     // Why 0.7? I don't know but it lines up...
     let size = hex.layout.hex_size.length() * 0.7;
 
     for (transform, cell) in cells.iter() {
-        draw.primitive_2d(
-            RegularPolygon::new(size, 6),
-            transform.translation.xy(),
-            0.0,
-            Color::RED,
-        );
-        if cell.state == CellState::On {
+        // draw.primitive_2d(
+        //     RegularPolygon::new(size, 6),
+        //     transform.translation.xy(),
+        //     0.0,
+        //     Color::RED,
+        // );
+        if let Some(StateId("sand")) = states.get_current(&cell.0) {
             draw.primitive_2d(
-                RegularPolygon::new(size * 0.7, 6),
+                RegularPolygon::new(size, 6),
                 transform.translation.xy(),
                 0.0,
                 Color::BLUE,
