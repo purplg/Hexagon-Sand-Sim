@@ -46,8 +46,13 @@ struct EntityMap(HashMap<Hex, Entity>);
 
 #[derive(Resource, Default)]
 struct CellStates {
+    /// The active state of the board.
     current: HashMap<Hex, StateId>,
+
+    /// Used as a buffer to stage the next frame.
     stage: HashMap<Hex, StateId>,
+
+    /// The delta for the next frame to be applied.
     next: HashMap<Hex, NextState>,
 }
 
