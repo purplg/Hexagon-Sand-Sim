@@ -1,4 +1,5 @@
 mod camera;
+mod game_state;
 mod grid;
 mod input;
 
@@ -14,6 +15,7 @@ fn main() {
         ..default()
     }));
     app.add_plugins(camera::Plugin);
+    app.add_plugins(game_state::Plugin);
     app.add_plugins(input::Plugin);
     app.add_plugins(grid::Plugin);
     app.run();
