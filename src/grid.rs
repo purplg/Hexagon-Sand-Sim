@@ -1,6 +1,7 @@
 use bevy::{prelude::*, time::common_conditions::on_timer, utils::HashMap, window::PrimaryWindow};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
+use rand::seq::SliceRandom;
 
 pub struct Plugin;
 
@@ -56,6 +57,11 @@ impl CellStates {
     fn is_state(&self, hex: &Hex, state_id: impl Into<StateId>) -> bool {
         self.get_next(hex)
             .is_some_and(|next| *next == state_id.into())
+    }
+
+    fn apply(&mut self, step: Step) {
+        self.next.insert(step.from, step.from_id);
+        self.next.insert(step.to, step.to_id);
     }
 
     fn set(&mut self, hex: &Hex, state_id: impl Into<StateId>) -> Option<StateId> {
@@ -129,49 +135,68 @@ impl From<&StateId> for StateId {
     }
 }
 
+struct Step {
+    from: Hex,
+    from_id: StateId,
+    to: Hex,
+    to_id: StateId,
+}
+
+impl Step {
+    pub fn new(from: Hex, from_id: impl Into<StateId>, to: Hex, to_id: impl Into<StateId>) -> Self {
+        Self {
+            from,
+            from_id: from_id.into(),
+            to,
+            to_id: to_id.into(),
+        }
+    }
+}
+
 trait CellState {
     fn tick(&self, _from: Hex, _states: &mut CellStates) {}
 
-    fn try_swap(&self, from: Hex, direction: EdgeDirection, states: &mut CellStates) -> bool {
+    fn try_step(&self, from: Hex, direction: EdgeDirection, states: &CellStates) -> Option<Step> {
         let to = from.neighbor(direction);
 
         if !states.is_state(&to, "air") {
-            return false;
+            return None;
         }
 
         let from_state = states.get_current(&from).unwrap().clone();
-        states.set(&to, from_state);
-        states.set(&from, "air");
-        return true;
+        Some(Step::new(to, from_state, from, "air"))
     }
 }
 
 struct Fire;
+
 impl CellState for Fire {
     fn tick(&self, from: Hex, states: &mut CellStates) {
-        if rand::random() {
-            if !self.try_swap(from, EdgeDirection::POINTY_TOP_LEFT, states) {
-                self.try_swap(from, EdgeDirection::POINTY_TOP_RIGHT, states);
-            }
-        } else {
-            if !self.try_swap(from, EdgeDirection::POINTY_TOP_RIGHT, states) {
-                self.try_swap(from, EdgeDirection::POINTY_TOP_LEFT, states);
-            }
+        if let Some(step) = [
+            EdgeDirection::POINTY_TOP_LEFT,
+            EdgeDirection::POINTY_TOP_RIGHT,
+        ]
+        .choose(&mut rand::thread_rng())
+        .into_iter()
+        .find_map(|direction| self.try_step(from, *direction, states))
+        {
+            states.apply(step);
         }
     }
 }
 
 struct Sand;
 impl CellState for Sand {
-    fn tick(&self, center: Hex, states: &mut CellStates) {
-        if rand::random() {
-            if !self.try_swap(center, EdgeDirection::POINTY_BOTTOM_LEFT, states) {
-                self.try_swap(center, EdgeDirection::POINTY_BOTTOM_RIGHT, states);
-            }
-        } else {
-            if !self.try_swap(center, EdgeDirection::POINTY_BOTTOM_RIGHT, states) {
-                self.try_swap(center, EdgeDirection::POINTY_BOTTOM_LEFT, states);
-            }
+    fn tick(&self, from: Hex, states: &mut CellStates) {
+        if let Some(step) = [
+            EdgeDirection::POINTY_BOTTOM_LEFT,
+            EdgeDirection::POINTY_BOTTOM_RIGHT,
+        ]
+        .choose(&mut rand::thread_rng())
+        .into_iter()
+        .find_map(|direction| self.try_step(from, *direction, states))
+        {
+            states.apply(step);
         }
     }
 }
