@@ -1,4 +1,5 @@
 mod camera;
+mod cell;
 mod game_state;
 mod grid;
 mod input;
