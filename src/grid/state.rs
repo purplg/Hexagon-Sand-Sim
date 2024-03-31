@@ -8,15 +8,15 @@ use crate::cell::StateId;
 #[derive(Component, Deref)]
 pub struct Cell(pub Hex);
 
-impl Into<Hex> for Cell {
-    fn into(self) -> Hex {
-        self.0
+impl From<Cell> for Hex {
+    fn from(value: Cell) -> Self {
+        value.0
     }
 }
 
-impl Into<Hex> for &Cell {
-    fn into(self) -> Hex {
-        self.0
+impl From<&Cell> for Hex {
+    fn from(value: &Cell) -> Self {
+        value.0
     }
 }
 
