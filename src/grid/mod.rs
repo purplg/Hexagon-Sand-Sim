@@ -64,13 +64,11 @@ fn startup_system(
 /// System to run the simulation every frame.
 fn sim_system(cells: Query<&Cell>, mut states: ResMut<CellStates>) {
     for cell in cells.iter() {
-        let Some(state) = states.get_current(cell.0) else {
-            continue;
-        };
-        match state {
-            StateId::Air => Air::tick(cell.0, &mut states),
-            StateId::Fire => Fire::tick(cell.0, &mut states),
-            StateId::Sand => Sand::tick(cell.0, &mut states),
+        match states.get_current(cell.0) {
+            Some(StateId::Air) => Air::tick(cell.0, &mut states),
+            Some(StateId::Fire) => Fire::tick(cell.0, &mut states),
+            Some(StateId::Sand) => Sand::tick(cell.0, &mut states),
+            None => {}
         }
     }
     states.tick();
@@ -95,44 +93,33 @@ fn render_system(
     let size = board.layout.hex_size.length() * 0.7;
 
     for cell in cells.iter() {
-        if states.get_next(cell.0) == Some(&StateId::Air) {
-            draw.primitive_2d(
-                RegularPolygon::new(size, 6),
-                board.layout.hex_to_world_pos(cell.0),
-                0.0,
-                Color::Rgba {
+        let Some(next) = states.get_next(cell.0) else {
+            continue;
+        };
+        draw.primitive_2d(
+            RegularPolygon::new(size, 6),
+            board.layout.hex_to_world_pos(cell.0),
+            0.0,
+            match next {
+                StateId::Air => Color::Rgba {
                     red: 1.0,
                     green: 1.0,
                     blue: 1.0,
                     alpha: 0.01,
                 },
-            );
-        }
-        if states.get_next(cell.0) == Some(&StateId::Fire) {
-            draw.primitive_2d(
-                RegularPolygon::new(size, 6),
-                board.layout.hex_to_world_pos(cell.0),
-                0.0,
-                Color::Rgba {
+                StateId::Fire => Color::Rgba {
                     red: 1.0,
                     green: 0.0,
                     blue: 0.0,
                     alpha: 1.0,
                 },
-            );
-        }
-        if states.get_next(cell.0) == Some(&StateId::Sand) {
-            draw.primitive_2d(
-                RegularPolygon::new(size, 6),
-                board.layout.hex_to_world_pos(cell.0),
-                0.0,
-                Color::Rgba {
+                StateId::Sand => Color::Rgba {
                     red: 1.0,
                     green: 1.0,
                     blue: 0.0,
                     alpha: 1.0,
                 },
-            );
-        }
+            },
+        );
     }
 }
