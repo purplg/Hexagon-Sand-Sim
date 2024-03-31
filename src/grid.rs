@@ -17,7 +17,7 @@ impl bevy::prelude::Plugin for Plugin {
             (sim, post_sim)
                 .chain()
                 .run_if(in_state(GameState::Running))
-                .run_if(on_timer(std::time::Duration::from_millis(200))),
+                .run_if(on_timer(std::time::Duration::from_millis(50))),
         );
         let mut states = StateRegistry::default();
         states.insert("air", Air);
@@ -29,10 +29,10 @@ impl bevy::prelude::Plugin for Plugin {
         app.insert_resource(HexGrid {
             layout: HexLayout {
                 orientation: HexOrientation::Pointy,
-                hex_size: Vec2::new(16.0, 16.0),
+                hex_size: Vec2::new(8.0, 8.0),
                 ..default()
             },
-            bounds: HexBounds::from_radius(16),
+            bounds: HexBounds::from_radius(32),
             entities: Default::default(),
         });
     }
@@ -130,117 +130,47 @@ impl From<&StateId> for StateId {
 }
 
 trait CellState {
-    fn tick(
-        &self,
-        _center: &Cell,
-        _grid: &HexGrid,
-        _states: &mut CellStates,
-        _cells: &Query<&Cell>,
-    ) {
-    }
+    fn tick(&self, _from: Hex, _states: &mut CellStates) {}
 
-    fn try_swap(
-        &self,
-        from: Hex,
-        to: Hex,
-        grid: &HexGrid,
-        states: &mut CellStates,
-        cells: &Query<&Cell>,
-    ) -> bool {
-        let Some(entity) = grid.entities.get(&to) else {
-            return false;
-        };
+    fn try_swap(&self, from: Hex, direction: EdgeDirection, states: &mut CellStates) -> bool {
+        let to = from.neighbor(direction);
 
-        let Some(to) = cells.get(*entity).ok() else {
-            return false;
-        };
-
-        if !states.is_state(to, "air") {
+        if !states.is_state(&to, "air") {
             return false;
         }
 
         let from_state = states.get_current(&from).unwrap().clone();
-        states.set(&to.0, from_state);
+        states.set(&to, from_state);
         states.set(&from, "air");
         return true;
     }
 }
 
 struct Fire;
-
 impl CellState for Fire {
-    fn tick(&self, center: &Cell, grid: &HexGrid, states: &mut CellStates, cells: &Query<&Cell>) {
+    fn tick(&self, from: Hex, states: &mut CellStates) {
         if rand::random() {
-            if !self.try_swap(
-                center.0,
-                center.neighbor(EdgeDirection::POINTY_TOP_LEFT),
-                grid,
-                states,
-                &cells,
-            ) {
-                self.try_swap(
-                    center.0,
-                    center.neighbor(EdgeDirection::POINTY_TOP_LEFT),
-                    grid,
-                    states,
-                    &cells,
-                );
+            if !self.try_swap(from, EdgeDirection::POINTY_TOP_LEFT, states) {
+                self.try_swap(from, EdgeDirection::POINTY_TOP_RIGHT, states);
             }
         } else {
-            if !self.try_swap(
-                center.0,
-                center.neighbor(EdgeDirection::POINTY_TOP_RIGHT),
-                grid,
-                states,
-                &cells,
-            ) {
-                self.try_swap(
-                    center.0,
-                    center.neighbor(EdgeDirection::POINTY_TOP_LEFT),
-                    grid,
-                    states,
-                    &cells,
-                );
+            if !self.try_swap(from, EdgeDirection::POINTY_TOP_RIGHT, states) {
+                self.try_swap(from, EdgeDirection::POINTY_TOP_LEFT, states);
             }
         }
     }
 }
 
 struct Sand;
-
 impl CellState for Sand {
-    fn tick(&self, center: &Cell, grid: &HexGrid, states: &mut CellStates, cells: &Query<&Cell>) {
+    fn tick(&self, center: Hex, states: &mut CellStates) {
         if rand::random() {
-            if !self.try_swap(
-                center.0,
-                center.neighbor(EdgeDirection::POINTY_BOTTOM_LEFT),
-                grid,
-                states,
-                &cells,
-            ) {
-                self.try_swap(
-                    center.0,
-                    center.neighbor(EdgeDirection::POINTY_BOTTOM_LEFT),
-                    grid,
-                    states,
-                    &cells,
-                );
+            if !self.try_swap(center, EdgeDirection::POINTY_BOTTOM_LEFT, states) {
+                self.try_swap(center, EdgeDirection::POINTY_BOTTOM_RIGHT, states);
             }
         } else {
-            if !self.try_swap(
-                center.0,
-                center.neighbor(EdgeDirection::POINTY_BOTTOM_RIGHT),
-                grid,
-                states,
-                &cells,
-            ) {
-                self.try_swap(
-                    center.0,
-                    center.neighbor(EdgeDirection::POINTY_BOTTOM_LEFT),
-                    grid,
-                    states,
-                    &cells,
-                );
+            if !self.try_swap(center, EdgeDirection::POINTY_BOTTOM_RIGHT, states) {
+                self.try_swap(center, EdgeDirection::POINTY_BOTTOM_LEFT, states);
             }
         }
     }
@@ -327,7 +257,7 @@ fn select(
     window: Query<&Window, With<PrimaryWindow>>,
 ) {
     let state = query.single();
-    if state.just_pressed(&Action::Select) {
+    if state.pressed(&Action::Select) {
         let (camera, camera_transform) = camera.single();
         let window = window.single();
         if let Some(world_position) = window
@@ -336,7 +266,7 @@ fn select(
             .map(|ray| ray.origin.truncate())
         {
             let cell_hex = grid.layout.world_pos_to_hex(world_position);
-            states.set(&cell_hex, "sand");
+            states.set(&cell_hex, "air");
         }
     }
 }
@@ -355,18 +285,13 @@ fn play_pause(
     }
 }
 
-fn sim(
-    grid: Res<HexGrid>,
-    state_ids: Res<StateRegistry>,
-    cells: Query<&Cell>,
-    mut states: ResMut<CellStates>,
-) {
+fn sim(state_ids: Res<StateRegistry>, cells: Query<&Cell>, mut states: ResMut<CellStates>) {
     for cell in cells.iter() {
         let Some(state_id) = states.get_current(&cell.0) else {
             continue;
         };
         let state = state_ids.get(state_id);
-        state.tick(cell, &grid, &mut states, &cells);
+        state.tick(cell.0, &mut states);
     }
 }
 
