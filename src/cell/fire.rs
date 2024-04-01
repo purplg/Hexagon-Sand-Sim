@@ -8,16 +8,18 @@ use super::{Behavior, Set, StateId, StepKind, Swap};
 pub struct Fire;
 
 impl Behavior for Fire {
-    fn tick(from: Hex, states: &mut CellStates) {
+    fn tick(from: Hex, states: &CellStates, mut rng: impl rand::RngCore) -> Option<StepKind> {
         if let Some(step) = [
             EdgeDirection::POINTY_TOP_LEFT,
             EdgeDirection::POINTY_TOP_RIGHT,
         ]
-        .choose(&mut rand::thread_rng())
+        .choose(&mut rng)
         .into_iter()
         .find_map(|direction| Self::try_move(from, *direction, states))
         {
-            step.apply(states)
+            Some(step)
+        } else {
+            None
         }
     }
 
@@ -25,13 +27,14 @@ impl Behavior for Fire {
         let to = from.neighbor(direction);
 
         if states.is_state(to, StateId::Air) {
-            return Some(StepKind::Swap(Swap { to, from }));
+            Some(StepKind::Swap(Swap { to, from }))
         } else if states.is_state(to, StateId::Water) {
-            return Some(StepKind::Set(Set {
-                positions: vec![to, from],
-                states: vec![StateId::Steam, StateId::Steam],
-            }));
+            Some(StepKind::Set(Set {
+                positions: vec![from, to],
+                states: vec![StateId::Air, StateId::Steam],
+            }))
+        } else {
+            None
         }
-        return None;
     }
 }

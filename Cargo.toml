@@ -9,7 +9,7 @@ edition = "2021"
 bevy = { version = "0.13.1", features = ["dynamic_linking"]}
 hexx = "0.16.1"
 leafwing-input-manager = "0.13.3"
-rand = "0.8.5"
+rand = { version = "0.8.5", features = ["small_rng"] }
 
 [profile.dev]
 opt-level = 1

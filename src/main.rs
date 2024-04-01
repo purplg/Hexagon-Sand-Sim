@@ -3,6 +3,7 @@ mod cell;
 mod game_state;
 mod grid;
 mod input;
+mod rng;
 
 use bevy::prelude::*;
 
@@ -15,6 +16,7 @@ fn main() {
         }),
         ..default()
     }));
+    app.add_plugins(rng::Plugin);
     app.add_plugins(camera::Plugin);
     app.add_plugins(game_state::Plugin);
     app.add_plugins(input::Plugin);

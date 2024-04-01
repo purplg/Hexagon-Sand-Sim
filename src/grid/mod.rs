@@ -5,6 +5,7 @@ use crate::{
     cell::{Air, Behavior, Fire, Sand, StateId, Steam, Water},
     game_state::GameState,
     input::Input,
+    rng::RngSource,
 };
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use hexx::*;
@@ -37,10 +38,10 @@ impl bevy::prelude::Plugin for Plugin {
         app.insert_resource(Board {
             layout: HexLayout {
                 orientation: HexOrientation::Pointy,
-                hex_size: Vec2::ONE * 16.0,
+                hex_size: Vec2::ONE * 2.0,
                 ..default()
             },
-            bounds: HexBounds::from_radius(16),
+            bounds: HexBounds::from_radius(64),
         });
     }
 }
@@ -71,33 +72,32 @@ fn startup_system(
 }
 
 /// System to run the simulation every frame.
-fn sim_system(cells: Query<&Cell>, mut states: ResMut<CellStates>) {
+fn sim_system(cells: Query<&Cell>, mut states: ResMut<CellStates>, mut rng: ResMut<RngSource>) {
     for cell in cells.iter() {
-        match states.get_current(cell.0) {
-            Some(StateId::Air) => Air::tick(cell.0, &mut states),
-            Some(StateId::Fire) => Fire::tick(cell.0, &mut states),
-            Some(StateId::Sand) => Sand::tick(cell.0, &mut states),
-            Some(StateId::Water) => Water::tick(cell.0, &mut states),
-            Some(StateId::Steam) => Steam::tick(cell.0, &mut states),
-            None => {}
+        if let Some(step) = match states.get_current(cell.0) {
+            Some(StateId::Air) => Air::tick(cell.0, &states, &mut rng.0),
+            Some(StateId::Fire) => Fire::tick(cell.0, &states, &mut rng.0),
+            Some(StateId::Sand) => Sand::tick(cell.0, &states, &mut rng.0),
+            Some(StateId::Water) => Water::tick(cell.0, &states, &mut rng.0),
+            Some(StateId::Steam) => Steam::tick(cell.0, &states, &mut rng.0),
+            None => None,
+        } {
+            step.apply(&mut states);
         }
     }
     states.tick();
 }
 
 /// System to enable user to step one tick forward through the sim.
-fn step_system(query: Query<&ActionState<Input>>, cells: Query<&Cell>, states: ResMut<CellStates>) {
+fn step_system(
+    query: Query<&ActionState<Input>>,
+    cells: Query<&Cell>,
+    states: ResMut<CellStates>,
+    rng: ResMut<RngSource>,
+) {
     let query = query.single();
     if query.just_pressed(&Input::Step) {
-        sim_system(cells, states);
-    }
-}
-
-/// System to run the system while a button is being held.
-fn fast_system(query: Query<&ActionState<Input>>, cells: Query<&Cell>, states: ResMut<CellStates>) {
-    let query = query.single();
-    if query.pressed(&Input::Fast) {
-        sim_system(cells, states);
+        sim_system(cells, states, rng);
     }
 }
 

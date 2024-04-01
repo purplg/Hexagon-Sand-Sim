@@ -1,5 +1,4 @@
 mod air;
-use std::ops::Deref;
 
 pub use air::Air;
 mod fire;
@@ -31,7 +30,9 @@ impl From<StateId> for Vec<StateId> {
 }
 
 pub trait Behavior {
-    fn tick(_from: Hex, _states: &mut CellStates) {}
+    fn tick(_from: Hex, _states: &CellStates, mut _rng: impl rand::Rng) -> Option<StepKind> {
+        None
+    }
 
     /// Try to move in a particular direction.
     ///
@@ -39,12 +40,11 @@ pub trait Behavior {
     /// specified direction is an Air cell;
     fn try_move(from: Hex, direction: EdgeDirection, states: &CellStates) -> Option<StepKind> {
         let to = from.neighbor(direction);
-
-        if !states.is_state(to, StateId::Air) {
-            return None;
+        if states.is_state(to, StateId::Air) {
+            Some(StepKind::Swap(Swap { to, from }))
+        } else {
+            None
         }
-
-        Some(StepKind::Swap(Swap { to, from }))
     }
 }
 
@@ -53,7 +53,7 @@ pub enum StepKind {
     Set(Set),
 }
 
-impl Deref for StepKind {
+impl std::ops::Deref for StepKind {
     type Target = dyn Step;
 
     fn deref(&self) -> &Self::Target {

@@ -3,38 +3,38 @@ use rand::seq::SliceRandom;
 
 use crate::grid::CellStates;
 
-use super::{Behavior, Set, StateId, Step, Swap, StepKind};
+use super::{Behavior, Set, StateId, StepKind, Swap};
 
 pub struct Steam;
 
 impl Behavior for Steam {
-    fn tick(from: Hex, states: &mut CellStates) {
+    fn tick(from: Hex, states: &CellStates, mut rng: impl rand::Rng) -> Option<StepKind> {
         // Chance to turn back into water.
         let precipitate: f32 = rand::random();
         if precipitate < 0.01 {
-            Set {
+            return Some(StepKind::Set(Set{
                 positions: vec![from],
                 states: vec![StateId::Water],
-            }
-            .apply(states);
-            return;
+            }));
         }
 
         if let Some(step) = [
             EdgeDirection::POINTY_TOP_LEFT,
             EdgeDirection::POINTY_TOP_RIGHT,
         ]
-        .choose(&mut rand::thread_rng())
+        .choose(&mut rng)
         .into_iter()
         .find_map(|direction| Self::try_move(from, *direction, states))
         {
-            step.apply(states)
+            Some(step)
         } else if let Some(step) = [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT]
-            .choose(&mut rand::thread_rng())
+            .choose(&mut rng)
             .into_iter()
             .find_map(|direction| Self::try_move(from, *direction, states))
         {
-            step.apply(states)
+            Some(step)
+        } else {
+            None
         }
     }
 
