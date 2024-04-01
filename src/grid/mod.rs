@@ -66,6 +66,7 @@ fn startup_system(
         states.set(hex, state_id);
         entities.insert(hex, entity.id());
     }
+    states.tick();
 }
 
 /// System to run the simulation every frame.
