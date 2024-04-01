@@ -1,12 +1,8 @@
 mod state;
+use rand::Rng;
 pub use state::{Board, Cell, CellStates, EntityMap, NextState};
 
-use crate::{
-    cell::{Air, Behavior, Fire, Sand, StateId, Steam, Water},
-    game_state::GameState,
-    input::Input,
-    rng::RngSource,
-};
+use crate::{cell::StateId, game_state::GameState, input::Input, rng::RngSource};
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
@@ -52,13 +48,14 @@ fn startup_system(
     board: Res<Board>,
     mut entities: ResMut<EntityMap>,
     mut states: ResMut<CellStates>,
+    mut rng: ResMut<RngSource>,
 ) {
     for hex in board.bounds.all_coords() {
         let mut entity = commands.spawn_empty();
-        let chance: f32 = rand::random();
+        let chance: f32 = rng.gen();
         let state_id = if chance < 0.25 {
             StateId::Sand
-        } else if chance < 0.5 {
+        } else if chance < 0.50 {
             StateId::Fire
         } else if chance < 0.75 {
             StateId::Water
@@ -66,7 +63,7 @@ fn startup_system(
             StateId::Air
         };
         entity.insert(Cell(hex));
-        states.set(hex, NextState::Spawn(state_id));
+        states.set(hex, state_id);
         entities.insert(hex, entity.id());
     }
 }
@@ -74,16 +71,15 @@ fn startup_system(
 /// System to run the simulation every frame.
 fn sim_system(cells: Query<&Cell>, mut states: ResMut<CellStates>, mut rng: ResMut<RngSource>) {
     for cell in cells.iter() {
-        if let Some(step) = match states.get_current(cell.0) {
-            Some(StateId::Air) => Air::tick(cell.0, &states, &mut rng.0),
-            Some(StateId::Fire) => Fire::tick(cell.0, &states, &mut rng.0),
-            Some(StateId::Sand) => Sand::tick(cell.0, &states, &mut rng.0),
-            Some(StateId::Water) => Water::tick(cell.0, &states, &mut rng.0),
-            Some(StateId::Steam) => Steam::tick(cell.0, &states, &mut rng.0),
-            None => None,
-        } {
-            step.apply(&mut states);
-        }
+        let Some(state) = states.get_current(cell).copied() else {
+            continue;
+        };
+
+        let Some(step) = state.tick(cell.0, &states, &mut rng.0) else {
+            continue;
+        };
+
+        step.apply(&mut states);
     }
     states.tick();
 }
@@ -112,12 +108,12 @@ fn render_system(
     let size = board.layout.hex_size.length() * 0.7;
 
     for cell in cells.iter() {
-        let Some(next) = states.get_next(cell.0) else {
+        let Some(next) = states.get_next(cell) else {
             continue;
         };
         draw.primitive_2d(
             RegularPolygon::new(size, 6),
-            board.layout.hex_to_world_pos(cell.0),
+            board.layout.hex_to_world_pos(cell.into()),
             0.0,
             match next {
                 StateId::Air => Color::Rgba {

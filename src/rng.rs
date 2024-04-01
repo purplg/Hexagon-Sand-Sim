@@ -14,6 +14,6 @@ pub struct RngSource(pub SmallRng);
 
 impl Default for RngSource {
     fn default() -> Self {
-        Self(SmallRng::from_entropy())
+        Self(SmallRng::from_seed([0; 32]))
     }
 }

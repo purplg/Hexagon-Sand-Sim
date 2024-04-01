@@ -57,7 +57,8 @@ impl CellStates {
     }
 
     /// Get the future [`StateId`] of a cell.
-    pub fn get_next(&self, hex: Hex) -> Option<&StateId> {
+    pub fn get_next(&self, hex: impl Into<Hex>) -> Option<&StateId> {
+        let hex = hex.into();
         match self.next.get(&hex) {
             Some(NextState::Spawn(id)) => Some(id),
             Some(NextState::Other(other)) => self.get_current(*other),
@@ -66,15 +67,9 @@ impl CellStates {
     }
 
     /// Return `true` if a `hex` has one of `state`.
-    pub fn is_state(&self, hex: Hex, state: impl Into<Vec<StateId>>) -> bool {
+    pub fn is_state(&self, hex: Hex, state: impl IntoIterator<Item = StateId>) -> bool {
         self.get_next(hex)
-            .map(|id| {
-                state
-                    .into()
-                    .into_iter()
-                    .find(|other_id| id == other_id)
-                    .is_some()
-            })
+            .map(|id| state.into_iter().find(|other_id| id == other_id).is_some())
             .unwrap_or(false)
     }
 
@@ -83,12 +78,12 @@ impl CellStates {
         self.next.insert(hex, next_state);
     }
 
-    pub fn is_set(&mut self, hex: Hex) -> bool {
+    pub fn is_set(&self, hex: Hex) -> bool {
         self.next.contains_key(&hex)
     }
 
-    pub fn any_set<'a>(&mut self, hexs: impl IntoIterator<Item = &'a Hex>) -> bool {
-        hexs.into_iter().any(|hex| self.is_set(*hex))
+    pub fn any_set(&self, hexs: impl IntoIterator<Item = Hex>) -> bool {
+        hexs.into_iter().any(|hex| self.is_set(hex))
     }
 
     /// Apply all changes in [`Self::next`] to [`Self::current`].

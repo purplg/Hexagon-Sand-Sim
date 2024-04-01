@@ -1,70 +1,51 @@
 use hexx::{EdgeDirection, Hex};
-use rand::seq::SliceRandom;
 
 use crate::grid::CellStates;
 
-use super::{Behavior, Set, StateId, StepKind, Swap};
+use super::{Behavior, Set, StateId::*, StepKind};
 
 pub struct Water;
 
 impl Behavior for Water {
     fn tick(from: Hex, states: &CellStates, mut rng: impl rand::Rng) -> Option<StepKind> {
-        // Chance to turn back into steam.
-        let evaporate: f32 = rng.gen();
-        if evaporate < 0.0001 {
-            return Some(StepKind::Set(Set {
-                positions: vec![from],
-                states: vec![StateId::Steam],
-            }));
-        }
-
-        // Try to move down
-        if let Some(step) = [
-            EdgeDirection::POINTY_BOTTOM_LEFT,
-            EdgeDirection::POINTY_BOTTOM_RIGHT,
-        ]
-        .choose(&mut rng)
-        .into_iter()
-        .find_map(|direction| Self::try_move_air(from, *direction, states))
-        {
-            return Some(step);
-        }
-
-        // If it can't move down, move laterally.
-        if let Some(step) = [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT]
-            .choose(&mut rng)
-            .into_iter()
-            .find_map(|direction| Self::try_move_horiz(from, *direction, states))
-        {
-            return Some(step);
-        }
-
-        return None;
+        Self::try_evaporate(from, &mut rng)
+            // Try to move down
+            .or_else(|| {
+                Self::slide(
+                    from,
+                    [
+                        EdgeDirection::POINTY_BOTTOM_LEFT,
+                        EdgeDirection::POINTY_BOTTOM_RIGHT,
+                    ],
+                    [Air],
+                    states,
+                    &mut rng,
+                )
+            })
+            // If it can't move down, move laterally.
+            .or_else(|| {
+                Self::slide(
+                    from,
+                    [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
+                    [Air],
+                    states,
+                    &mut rng,
+                )
+            })
     }
 }
 
 impl Water {
-    fn try_move_air(from: Hex, direction: EdgeDirection, states: &CellStates) -> Option<StepKind> {
-        let to = from.neighbor(direction);
-
-        if states.is_state(to, StateId::Air) {
-            return Some(StepKind::Swap(Swap { to, from }));
+    /// Chance to turn back into steam.
+    fn try_evaporate(from: Hex, mut rng: impl rand::Rng) -> Option<StepKind> {
+        let precipitate: f32 = rng.gen();
+        if precipitate < 0.0001 {
+            Some(StepKind::Set(Set {
+                hex: from,
+                id: Steam,
+            }))
+        } else {
+            None
         }
-
-        return None;
-    }
-
-    fn try_move_horiz(
-        from: Hex,
-        direction: EdgeDirection,
-        states: &CellStates,
-    ) -> Option<StepKind> {
-        let to = from.neighbor(direction);
-
-        if states.is_state(to, [StateId::Air]) {
-            return Some(StepKind::Swap(Swap { to, from }));
-        }
-
-        return None;
     }
 }

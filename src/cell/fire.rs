@@ -1,38 +1,48 @@
 use hexx::{EdgeDirection, Hex};
-use rand::seq::SliceRandom;
+use rand::seq::IteratorRandom;
 
 use crate::grid::CellStates;
 
-use super::{Behavior, Set, StateId, StepKind, Swap};
+use super::{Behavior, Set, StateId, StateId::*, StepKind, Swap};
 
 pub struct Fire;
 
 impl Behavior for Fire {
-    fn tick(from: Hex, states: &CellStates, mut rng: impl rand::RngCore) -> Option<StepKind> {
-        if let Some(step) = [
-            EdgeDirection::POINTY_TOP_LEFT,
-            EdgeDirection::POINTY_TOP_RIGHT,
-        ]
-        .choose(&mut rng)
-        .into_iter()
-        .find_map(|direction| Self::try_move(from, *direction, states))
-        {
-            Some(step)
-        } else {
-            None
-        }
+    fn tick(from: Hex, states: &CellStates, rng: impl rand::RngCore) -> Option<StepKind> {
+        Self::slide(
+            from,
+            [
+                EdgeDirection::POINTY_TOP_LEFT,
+                EdgeDirection::POINTY_TOP_RIGHT,
+            ],
+            [],
+            states,
+            rng,
+        )
     }
 
-    fn try_move(from: Hex, direction: EdgeDirection, states: &CellStates) -> Option<StepKind> {
-        let to = from.neighbor(direction);
+    fn slide<'a>(
+        from: Hex,
+        directions: impl IntoIterator<Item = EdgeDirection>,
+        _swappable: impl IntoIterator<Item = StateId>,
+        states: &CellStates,
+        mut rng: impl rand::Rng,
+    ) -> Option<StepKind> {
+        let to = from.neighbor(directions.into_iter().choose(&mut rng).unwrap());
 
-        if states.is_state(to, StateId::Air) {
+        if states.is_state(to, [Air]) {
             Some(StepKind::Swap(Swap { to, from }))
-        } else if states.is_state(to, StateId::Water) {
-            Some(StepKind::Set(Set {
-                positions: vec![from, to],
-                states: vec![StateId::Air, StateId::Steam],
-            }))
+        } else if states.is_state(to, [Water]) {
+            Some(StepKind::SetMany(vec![
+                Set {
+                    hex: from,
+                    id: StateId::Steam,
+                },
+                Set {
+                    hex: to,
+                    id: StateId::Steam,
+                },
+            ]))
         } else {
             None
         }
