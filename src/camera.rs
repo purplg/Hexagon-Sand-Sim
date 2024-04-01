@@ -1,15 +1,65 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    window::{CursorGrabMode, PrimaryWindow},
+};
+use leafwing_input_manager::prelude::*;
+
+use crate::input::Input;
 
 pub struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, startup);
-        app.insert_resource(ClearColor(Color::BLACK));
+        app.insert_resource(ClearColor(Color::rgb(0.01, 0.01, 0.01)));
+        app.add_systems(Startup, setup);
+        app.add_systems(
+            Update,
+            (zoom, pan).run_if(|window: Query<&Window, With<PrimaryWindow>>| {
+                window.single().cursor.grab_mode == CursorGrabMode::Confined
+            }),
+        );
+        app.add_systems(Update, cursor_grab);
+    }
+}
+fn setup(mut commands: Commands) {
+    commands.spawn(Camera2dBundle::default());
+}
+
+fn cursor_grab(
+    mut window: Query<&mut Window, With<PrimaryWindow>>,
+    input: Query<&ActionState<Input>>,
+) {
+    let mut window = window.single_mut();
+
+    let state = input.single();
+    if state.just_pressed(&Input::Grab) {
+        window.cursor.grab_mode = CursorGrabMode::Confined;
+        window.cursor.visible = false;
+    } else if state.just_released(&Input::Grab) {
+        window.cursor.grab_mode = CursorGrabMode::None;
+        window.cursor.visible = true;
     }
 }
 
-fn startup(mut commands: Commands) {
-    let mut entity = commands.spawn_empty();
-    entity.insert(Camera2dBundle::default());
+fn zoom(
+    mut query: Query<&mut OrthographicProjection>,
+    input: Query<&ActionState<Input>>,
+    dt: Res<Time>,
+) {
+    let mut camera = query.single_mut();
+    let input = input.single();
+    let zoom = input.value(&Input::Zoom);
+
+    camera.scale *= 1. - zoom * dt.delta_seconds() * 50.;
+}
+
+fn pan(mut query: Query<&mut Transform>, input: Query<&ActionState<Input>>, dt: Res<Time>) {
+    let mut transform = query.single_mut();
+    let input = input.single();
+    let Some(pan) = input.axis_pair(&Input::Pan) else {
+        return;
+    };
+
+    transform.translation.x -= pan.x() * dt.delta_seconds() * 100.;
+    transform.translation.y += pan.y() * dt.delta_seconds() * 100.;
 }
