@@ -24,30 +24,14 @@ impl From<&Cell> for Hex {
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct EntityMap(HashMap<Hex, Entity>);
 
-/// The future state of a cell.
-///
-/// [`CellStates`] uses this when trying resolve the future state of a
-/// cell.
-#[derive(Clone, Copy)]
-pub enum NextState {
-    /// A new cell was created.
-    Spawn(StateId),
-
-    /// The state from another cell will be used.
-    Other(Hex),
-}
-
 /// The state of the board.
 #[derive(Resource, Default)]
 pub struct CellStates {
     /// The visible state of the board.
     current: HashMap<Hex, StateId>,
 
-    /// Used as a buffer during [`Self::tick()`] to stage the next frame.
-    stage: HashMap<Hex, StateId>,
-
     /// The delta for the next frame to be applied when [`Self::tick()`] is called.
-    next: HashMap<Hex, NextState>,
+    next: HashMap<Hex, StateId>,
 }
 
 impl CellStates {
@@ -58,24 +42,19 @@ impl CellStates {
 
     /// Get the future [`StateId`] of a cell.
     pub fn get_next(&self, hex: impl Into<Hex>) -> Option<&StateId> {
-        let hex = hex.into();
-        match self.next.get(&hex) {
-            Some(NextState::Spawn(id)) => Some(id),
-            Some(NextState::Other(other)) => self.get_current(*other),
-            None => self.get_current(hex),
-        }
+        self.next.get(&hex.into())
     }
 
     /// Return `true` if a `hex` has one of `state`.
     pub fn is_state(&self, hex: Hex, state: impl IntoIterator<Item = StateId>) -> bool {
-        self.get_next(hex)
+        self.get_current(hex)
             .map(|id| state.into_iter().find(|other_id| id == other_id).is_some())
             .unwrap_or(false)
     }
 
     /// Set the future state of a cell.
-    pub fn set(&mut self, hex: Hex, next_state: NextState) {
-        self.next.insert(hex, next_state);
+    pub fn set(&mut self, hex: Hex, id: StateId) {
+        self.next.insert(hex, id);
     }
 
     pub fn is_set(&self, hex: Hex) -> bool {
@@ -95,20 +74,8 @@ impl CellStates {
                 .filter(|id| **id != StateId::Air)
                 .count()
         );
-        for (hex, next_state) in self.next.drain() {
-            match next_state {
-                NextState::Spawn(id) => {
-                    self.stage.insert(hex, id);
-                }
-                NextState::Other(other) => {
-                    if let Some(other_id) = self.current.get(&other) {
-                        self.stage.insert(hex, *other_id);
-                    }
-                }
-            };
-        }
 
-        for (hex, id) in self.stage.drain() {
+        for (hex, id) in self.next.drain() {
             self.current.insert(hex, id);
         }
     }

@@ -1,6 +1,6 @@
 mod state;
 use rand::Rng;
-pub use state::{Board, Cell, CellStates, EntityMap, NextState};
+pub use state::{Board, Cell, CellStates, EntityMap};
 
 use crate::{cell::StateId, game_state::GameState, input::Input, rng::RngSource};
 use bevy::{prelude::*, time::common_conditions::on_timer};
@@ -108,7 +108,7 @@ fn render_system(
     let size = board.layout.hex_size.length() * 0.7;
 
     for cell in cells.iter() {
-        let Some(next) = states.get_next(cell) else {
+        let Some(next) = states.get_current(cell) else {
             continue;
         };
         draw.primitive_2d(

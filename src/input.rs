@@ -3,7 +3,7 @@ use leafwing_input_manager::prelude::*;
 
 use crate::{
     cell::StateId,
-    grid::{Cell, CellStates, EntityMap, Board, NextState},
+    grid::{Board, Cell, CellStates, EntityMap},
 };
 
 pub struct Plugin;
@@ -89,7 +89,7 @@ fn select(
             .map(|ray| ray.origin.truncate())
         {
             let hex = board.layout.world_pos_to_hex(world_position);
-            states.set(hex, NextState::Spawn(StateId::Air));
+            states.set(hex, StateId::Air);
         }
     }
 }

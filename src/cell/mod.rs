@@ -13,7 +13,7 @@ pub use steam::Steam;
 
 use hexx::{EdgeDirection, Hex};
 
-use crate::grid::{CellStates, NextState};
+use crate::grid::CellStates;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum StateId {
@@ -99,8 +99,8 @@ impl Step for Swap {
             return;
         }
 
-        states.set(self.from, NextState::Other(self.to));
-        states.set(self.to, NextState::Other(self.from));
+        states.set(self.from, *states.get_current(self.to).unwrap());
+        states.set(self.to, *states.get_current(self.from).unwrap());
     }
 }
 
@@ -117,7 +117,7 @@ impl Step for Set {
             return;
         }
 
-        states.set(self.hex, NextState::Spawn(self.id));
+        states.set(self.hex, self.id);
     }
 }
 
