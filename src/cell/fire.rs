@@ -21,13 +21,17 @@ impl Behavior for Fire {
         )
     }
 
-    fn slide<'a>(
+    fn slide<D, S>(
         from: Hex,
-        directions: impl IntoIterator<Item = EdgeDirection>,
-        _swappable: impl IntoIterator<Item = StateId>,
+        directions: D,
+        _with_state: S,
         states: &CellStates,
         mut rng: impl rand::Rng,
-    ) -> Option<StepKind> {
+    ) -> Option<StepKind>
+    where
+        D: IntoIterator<Item = EdgeDirection>,
+        S: IntoIterator<Item = StateId>,
+    {
         let to = from.neighbor(directions.into_iter().choose(&mut rng).unwrap());
 
         if states.is_state(to, [Air]) {

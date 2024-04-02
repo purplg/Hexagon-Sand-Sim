@@ -46,13 +46,17 @@ pub trait Behavior {
     }
 
     /// Try to swap with another cell `with_state` in a particular `direction`.
-    fn slide(
+    fn slide<D, S>(
         from: Hex,
-        directions: impl IntoIterator<Item = EdgeDirection>,
-        with_state: impl IntoIterator<Item = StateId>,
+        directions: D,
+        with_state: S,
         states: &CellStates,
         mut rng: impl rand::Rng,
-    ) -> Option<StepKind> {
+    ) -> Option<StepKind>
+    where
+        D: IntoIterator<Item = EdgeDirection>,
+        S: IntoIterator<Item = StateId>,
+    {
         let to = from.neighbor(directions.into_iter().choose(&mut rng).unwrap());
         if states.is_state(to, with_state) {
             Some(StepKind::Swap(Swap { to, from }))
