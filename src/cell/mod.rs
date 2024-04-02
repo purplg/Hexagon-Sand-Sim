@@ -1,19 +1,13 @@
 mod air;
-
 pub use air::Air;
 mod fire;
 pub use fire::Fire;
 mod sand;
-use rand::seq::IteratorRandom;
 pub use sand::Sand;
 mod water;
 pub use water::Water;
 mod steam;
 pub use steam::Steam;
-
-use hexx::{EdgeDirection, Hex};
-
-use crate::grid::CellStates;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum StateId {
@@ -35,6 +29,10 @@ impl StateId {
         }
     }
 }
+
+use crate::grid::CellStates;
+use hexx::{EdgeDirection, Hex};
+use rand::seq::IteratorRandom;
 
 impl From<StateId> for Vec<StateId> {
     fn from(value: StateId) -> Self {
