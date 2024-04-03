@@ -3,27 +3,6 @@ use hexx::*;
 
 use crate::cell::StateId;
 
-/// A Bevy component to just store the Hexagon position on the board
-/// for an entity.
-#[derive(Component, Deref)]
-pub struct Cell(pub Hex);
-
-impl From<Cell> for Hex {
-    fn from(value: Cell) -> Self {
-        value.0
-    }
-}
-
-impl From<&Cell> for Hex {
-    fn from(value: &Cell) -> Self {
-        value.0
-    }
-}
-
-/// Lookup Entity IDs from their position on the board.
-#[derive(Resource, Default, Deref, DerefMut)]
-pub struct EntityMap(HashMap<Hex, Entity>);
-
 /// The state of the board.
 #[derive(Resource, Default)]
 pub struct CellStates {

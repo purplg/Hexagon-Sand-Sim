@@ -3,7 +3,7 @@ mod state;
 use std::time::Duration;
 
 use rand::Rng;
-pub use state::{Board, Cell, CellStates, EntityMap};
+pub use state::{Board, CellStates};
 
 use crate::{cell::StateId, input::Input, rng::RngSource};
 use bevy::{prelude::*, time::common_conditions::on_timer};
@@ -24,7 +24,6 @@ impl bevy::prelude::Plugin for Plugin {
             bounds: HexBounds::from_radius(64),
         });
         app.init_resource::<CellStates>();
-        app.init_resource::<EntityMap>();
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
 
@@ -55,15 +54,8 @@ pub enum SimState {
 struct TickEvent;
 
 /// Generate a fresh board.
-fn startup_system(
-    mut commands: Commands,
-    board: Res<Board>,
-    mut entities: ResMut<EntityMap>,
-    mut states: ResMut<CellStates>,
-    mut rng: ResMut<RngSource>,
-) {
+fn startup_system(board: Res<Board>, mut states: ResMut<CellStates>, mut rng: ResMut<RngSource>) {
     for hex in board.bounds.all_coords() {
-        let mut entity = commands.spawn_empty();
         let chance: f32 = rng.gen();
         let state_id = if chance < 0.25 {
             StateId::Sand
@@ -74,9 +66,7 @@ fn startup_system(
         } else {
             StateId::Air
         };
-        entity.insert(Cell(hex));
         states.set(hex, state_id);
-        entities.insert(hex, entity.id());
     }
     states.tick();
 }
@@ -87,16 +77,14 @@ fn tick_system(mut tick_event: EventWriter<TickEvent>) {
 }
 
 /// System to run the simulation every frame.
-fn sim_system(cells: Query<&Cell>, mut states: ResMut<CellStates>, mut rng: ResMut<RngSource>) {
-    for cell in cells.iter() {
-        let Some(state) = states.get_current(cell).copied() else {
-            continue;
-        };
-
-        let Some(step) = state.tick(cell.0, &states, &mut rng.0) else {
-            continue;
-        };
-
+fn sim_system(mut states: ResMut<CellStates>, mut rng: ResMut<RngSource>) {
+    for step in states
+        .current
+        .iter()
+        .filter_map(|(hex, state)| state.tick(*hex, &states, &mut rng.0))
+        .collect::<Vec<_>>()
+        .into_iter()
+    {
         step.apply(&mut states);
     }
 }
@@ -115,24 +103,16 @@ fn step_system(query: Query<&ActionState<Input>>, mut tick_event: EventWriter<Ti
 }
 
 /// System to render the cells on the board... using Gizmos!
-fn render_system(
-    mut draw: Gizmos,
-    board: Res<Board>,
-    cells: Query<&Cell>,
-    states: Res<CellStates>,
-) {
+fn render_system(mut draw: Gizmos, board: Res<Board>, states: Res<CellStates>) {
     // HACK Why 0.7? I don't know but it lines up...
     let size = board.layout.hex_size.length() * 0.7;
 
-    for cell in cells.iter() {
-        let Some(next) = states.get_current(cell) else {
-            continue;
-        };
+    for (hex, id) in states.current.iter() {
         draw.primitive_2d(
             RegularPolygon::new(size, 6),
-            board.layout.hex_to_world_pos(cell.into()),
+            board.layout.hex_to_world_pos(*hex),
             0.0,
-            match next {
+            match id {
                 StateId::Air => Color::Rgba {
                     red: 1.0,
                     green: 1.0,
