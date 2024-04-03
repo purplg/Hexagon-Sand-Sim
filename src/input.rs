@@ -1,9 +1,9 @@
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{app::AppExit, prelude::*, window::PrimaryWindow};
 use leafwing_input_manager::prelude::*;
 
 use crate::{
     cell::StateId,
-    grid::{Board, CellStates},
+    grid::{Board, CellStates, SimState},
 };
 
 pub struct Plugin;
@@ -26,24 +26,27 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(InputManagerPlugin::<Input>::default());
         app.add_systems(Startup, startup);
         app.add_systems(Update, select);
+        app.add_systems(Update, sim);
+        app.add_systems(Update, quit);
     }
 }
 
 fn startup(mut commands: Commands) {
     commands.spawn(InputManagerBundle::with_map(
-        InputMap::new([
-            (Input::Select, MouseButton::Left),
-            (Input::Grab, MouseButton::Right),
-        ])
-        .insert(Input::Zoom, SingleAxis::mouse_wheel_y())
-        .insert(Input::Pan, DualAxis::mouse_motion())
-        .insert_multiple([
-            (Input::Quit, KeyCode::Escape),
-            (Input::PlayPause, KeyCode::Tab),
-            (Input::Step, KeyCode::Enter),
-            (Input::Fast, KeyCode::Space),
-        ])
-        .build(),
+        InputMap::default()
+            .insert(Input::Zoom, SingleAxis::mouse_wheel_y())
+            .insert(Input::Pan, DualAxis::mouse_motion())
+            .insert_multiple([
+                (Input::Select, MouseButton::Left),
+                (Input::Grab, MouseButton::Right),
+            ])
+            .insert_multiple([
+                (Input::Quit, KeyCode::Escape),
+                (Input::PlayPause, KeyCode::Tab),
+                (Input::Step, KeyCode::Enter),
+                (Input::Fast, KeyCode::Space),
+            ])
+            .build(),
     ));
 }
 
@@ -66,5 +69,38 @@ fn select(
             let hex = board.layout.world_pos_to_hex(world_position);
             states.set(hex, StateId::Air);
         }
+    }
+}
+
+fn sim(
+    query: Query<&ActionState<Input>>,
+    state: Res<State<SimState>>,
+    mut next_state: ResMut<NextState<SimState>>,
+) {
+    let query = query.single();
+    if query.just_pressed(&Input::PlayPause) {
+        match state.get() {
+            SimState::Running => next_state.set(SimState::Paused),
+            SimState::Paused => next_state.set(SimState::Running),
+            _ => {}
+        };
+    }
+    if query.just_pressed(&Input::Fast) {
+        match state.get() {
+            SimState::Accelerated => {}
+            SimState::Running => next_state.set(SimState::Accelerated),
+            SimState::Paused => next_state.set(SimState::Accelerated),
+        };
+    } else if query.just_released(&Input::Fast) {
+        if let SimState::Accelerated = state.get() {
+            next_state.set(SimState::Paused)
+        };
+    }
+}
+
+fn quit(query: Query<&ActionState<Input>>, mut app_exit_events: ResMut<Events<AppExit>>) {
+    let query = query.single();
+    if query.just_pressed(&Input::Quit) {
+        app_exit_events.send(AppExit);
     }
 }

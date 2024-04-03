@@ -1,8 +1,11 @@
 mod state;
+
+use std::time::Duration;
+
 use rand::Rng;
 pub use state::{Board, Cell, CellStates, EntityMap};
 
-use crate::{cell::StateId, game_state::GameState, input::Input, rng::RngSource};
+use crate::{cell::StateId, input::Input, rng::RngSource};
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
@@ -11,25 +14,6 @@ pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, startup_system);
-        app.add_systems(Update, render_system);
-        app.add_systems(Update, step_system.run_if(in_state(GameState::Paused)));
-        app.add_systems(
-            Update,
-            sim_system
-                .run_if(in_state(GameState::Running))
-                .run_if(on_timer(std::time::Duration::from_millis(50))),
-        );
-        app.add_systems(
-            Update,
-            sim_system.run_if(
-                in_state(GameState::AcceleratedRunning)
-                    .or_else(in_state(GameState::AcceleratedPaused)),
-            ),
-        );
-        app.init_resource::<CellStates>();
-        app.init_resource::<EntityMap>();
-
         // Adjust the size and layout of the board.
         app.insert_resource(Board {
             layout: HexLayout {
@@ -39,8 +23,36 @@ impl bevy::prelude::Plugin for Plugin {
             },
             bounds: HexBounds::from_radius(64),
         });
+        app.init_resource::<CellStates>();
+        app.init_resource::<EntityMap>();
+        app.init_state::<SimState>();
+        app.add_event::<TickEvent>();
+
+        app.add_systems(Startup, startup_system);
+        app.add_systems(
+            Update,
+            tick_system
+                .run_if(on_timer(Duration::from_millis(50)))
+                .run_if(in_state(SimState::Running)),
+        );
+        app.add_systems(Update, tick_system.run_if(in_state(SimState::Accelerated)));
+        app.add_systems(Update, step_system.run_if(in_state(SimState::Paused)));
+        app.add_systems(PreUpdate, sim_system.run_if(on_event::<TickEvent>()));
+        app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
+        app.add_systems(Update, render_system);
     }
 }
+
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SimState {
+    Accelerated,
+    Running,
+    #[default]
+    Paused,
+}
+
+#[derive(Event)]
+struct TickEvent;
 
 /// Generate a fresh board.
 fn startup_system(
@@ -69,6 +81,11 @@ fn startup_system(
     states.tick();
 }
 
+/// Sends a tick event to step the simulation forward one step.
+fn tick_system(mut tick_event: EventWriter<TickEvent>) {
+    tick_event.send(TickEvent);
+}
+
 /// System to run the simulation every frame.
 fn sim_system(cells: Query<&Cell>, mut states: ResMut<CellStates>, mut rng: ResMut<RngSource>) {
     for cell in cells.iter() {
@@ -82,19 +99,18 @@ fn sim_system(cells: Query<&Cell>, mut states: ResMut<CellStates>, mut rng: ResM
 
         step.apply(&mut states);
     }
+}
+
+/// Move all the queued states into the current state.
+fn flush_system(mut states: ResMut<CellStates>) {
     states.tick();
 }
 
 /// System to enable user to step one tick forward through the sim.
-fn step_system(
-    query: Query<&ActionState<Input>>,
-    cells: Query<&Cell>,
-    states: ResMut<CellStates>,
-    rng: ResMut<RngSource>,
-) {
+fn step_system(query: Query<&ActionState<Input>>, mut tick_event: EventWriter<TickEvent>) {
     let query = query.single();
     if query.just_pressed(&Input::Step) {
-        sim_system(cells, states, rng);
+        tick_event.send(TickEvent);
     }
 }
 

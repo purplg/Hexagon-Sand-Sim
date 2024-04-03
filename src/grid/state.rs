@@ -28,10 +28,10 @@ pub struct EntityMap(HashMap<Hex, Entity>);
 #[derive(Resource, Default)]
 pub struct CellStates {
     /// The visible state of the board.
-    current: HashMap<Hex, StateId>,
+    pub current: HashMap<Hex, StateId>,
 
     /// The delta for the next frame to be applied when [`Self::tick()`] is called.
-    next: HashMap<Hex, StateId>,
+    pub next: HashMap<Hex, StateId>,
 }
 
 impl CellStates {
@@ -67,14 +67,6 @@ impl CellStates {
 
     /// Apply all changes in [`Self::next`] to [`Self::current`].
     pub(super) fn tick(&mut self) {
-        println!(
-            "count: {:?}",
-            self.current
-                .values()
-                .filter(|id| **id != StateId::Air)
-                .count()
-        );
-
         for (hex, id) in self.next.drain() {
             self.current.insert(hex, id);
         }
