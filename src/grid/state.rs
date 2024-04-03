@@ -1,7 +1,12 @@
 use bevy::{prelude::*, utils::HashMap};
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use hexx::*;
 
 use crate::cell::StateId;
+
+/// Lookup Entity IDs from their position on the board.
+#[derive(Resource, Default, Deref, DerefMut)]
+pub struct EntityMap(HashMap<Hex, Entity>);
 
 /// The state of the board.
 #[derive(Resource, Default)]
@@ -53,8 +58,18 @@ impl CellStates {
 }
 
 /// The size and layout of the board.
-#[derive(Resource)]
+#[derive(Reflect, Resource, InspectorOptions)]
+#[reflect(Resource, InspectorOptions)]
 pub struct Board {
     pub layout: HexLayout,
     pub bounds: HexBounds,
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Self {
+            layout: Default::default(),
+            bounds: HexBounds::new(Hex::default(), 0),
+        }
+    }
 }

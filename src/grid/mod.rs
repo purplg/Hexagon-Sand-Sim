@@ -1,12 +1,16 @@
 mod state;
 
-use std::time::Duration;
+use std::{
+    ops::{Deref, DerefMut},
+    time::Duration,
+};
 
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use rand::Rng;
 pub use state::{Board, CellStates};
 
 use crate::{cell::StateId, input::Input, rng::RngSource};
-use bevy::{prelude::*, time::common_conditions::on_timer};
+use bevy::prelude::*;
 use hexx::*;
 use leafwing_input_manager::prelude::*;
 
@@ -24,25 +28,26 @@ impl bevy::prelude::Plugin for Plugin {
             bounds: HexBounds::from_radius(64),
         });
         app.init_resource::<CellStates>();
+        app.insert_resource(TickRate::new(Duration::from_millis(50)));
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
 
         app.add_systems(Startup, startup_system);
         app.add_systems(
             Update,
-            tick_system
-                .run_if(on_timer(Duration::from_millis(50)))
-                .run_if(in_state(SimState::Running)),
+            tick_system.run_if(|state: Res<State<SimState>>| state.is_running()),
         );
-        app.add_systems(Update, tick_system.run_if(in_state(SimState::Accelerated)));
-        app.add_systems(Update, step_system.run_if(in_state(SimState::Paused)));
+        app.add_systems(Update, control_system);
         app.add_systems(PreUpdate, sim_system.run_if(on_event::<TickEvent>()));
         app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
         app.add_systems(Update, render_system);
     }
 }
 
-#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(
+    States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect, Resource, InspectorOptions,
+)]
+#[reflect(Resource, InspectorOptions)]
 pub enum SimState {
     Accelerated,
     Running,
@@ -50,11 +55,26 @@ pub enum SimState {
     Paused,
 }
 
+impl SimState {
+    pub fn is_running(&self) -> bool {
+        match self {
+            SimState::Accelerated | SimState::Running => true,
+            SimState::Paused => false,
+        }
+    }
+}
+
 #[derive(Event)]
 struct TickEvent;
 
 /// Generate a fresh board.
-fn startup_system(board: Res<Board>, mut states: ResMut<CellStates>, mut rng: ResMut<RngSource>) {
+pub fn startup_system(
+    board: Res<Board>,
+    mut states: ResMut<CellStates>,
+    mut rng: ResMut<RngSource>,
+) {
+    states.current.clear();
+    states.next.clear();
     for hex in board.bounds.all_coords() {
         let chance: f32 = rng.gen();
         let state_id = if chance < 0.25 {
@@ -71,9 +91,59 @@ fn startup_system(board: Res<Board>, mut states: ResMut<CellStates>, mut rng: Re
     states.tick();
 }
 
+#[derive(Reflect, Resource, Default, InspectorOptions)]
+#[reflect(Resource, InspectorOptions)]
+pub struct TickRate {
+    pub timer: Timer,
+    pub normal_speed: Duration,
+}
+
+impl Deref for TickRate {
+    type Target = Timer;
+
+    fn deref(&self) -> &Self::Target {
+        &self.timer
+    }
+}
+
+impl DerefMut for TickRate {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.timer
+    }
+}
+
+impl TickRate {
+    fn new(duration: Duration) -> Self {
+        Self {
+            timer: Timer::new(duration, TimerMode::Repeating),
+            normal_speed: duration,
+        }
+    }
+
+    pub fn fast(&mut self) {
+        self.timer.set_duration(Duration::ZERO);
+    }
+
+    pub fn normal(&mut self) {
+        self.timer.set_duration(self.normal_speed);
+    }
+
+    pub fn set_normal(&mut self, millis: u64) {
+        self.normal_speed = Duration::from_millis(millis);
+        self.normal();
+    }
+}
+
 /// Sends a tick event to step the simulation forward one step.
-fn tick_system(mut tick_event: EventWriter<TickEvent>) {
-    tick_event.send(TickEvent);
+fn tick_system(
+    mut tick_event: EventWriter<TickEvent>,
+    mut rate: ResMut<TickRate>,
+    time: Res<Time>,
+) {
+    rate.tick(time.delta());
+    if rate.just_finished() {
+        tick_event.send(TickEvent);
+    }
 }
 
 /// System to run the simulation every frame.
@@ -94,11 +164,23 @@ fn flush_system(mut states: ResMut<CellStates>) {
     states.tick();
 }
 
-/// System to enable user to step one tick forward through the sim.
-fn step_system(query: Query<&ActionState<Input>>, mut tick_event: EventWriter<TickEvent>) {
+/// System to enable enable use control over the simulation.
+fn control_system(
+    query: Query<&ActionState<Input>>,
+    mut tick_event: EventWriter<TickEvent>,
+    mut rate: ResMut<TickRate>,
+) {
     let query = query.single();
     if query.just_pressed(&Input::Step) {
         tick_event.send(TickEvent);
+    }
+
+    if query.just_pressed(&Input::Fast) {
+        rate.fast();
+    }
+
+    if query.just_released(&Input::Fast) {
+        rate.normal();
     }
 }
 
