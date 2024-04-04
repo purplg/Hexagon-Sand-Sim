@@ -196,7 +196,9 @@ fn control_system(
             .map(|ray| ray.origin.truncate())
         {
             let hex = board.layout.world_pos_to_hex(world_position);
-            states.set(hex, StateId::Air);
+            if board.bounds.is_in_bounds(hex) {
+                states.set(hex, StateId::Air);
+            }
         }
     }
 }
