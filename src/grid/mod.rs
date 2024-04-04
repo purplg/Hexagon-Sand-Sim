@@ -164,7 +164,7 @@ fn flush_system(mut states: ResMut<CellStates>) {
     states.tick();
 }
 
-/// System to enable enable use control over the simulation.
+/// System to enable user control over the simulation.
 fn control_system(
     query: Query<&ActionState<Input>>,
     mut tick_event: EventWriter<TickEvent>,
