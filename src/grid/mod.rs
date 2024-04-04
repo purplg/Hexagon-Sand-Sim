@@ -10,7 +10,7 @@ use rand::Rng;
 pub use state::{Board, CellStates};
 
 use crate::{cell::StateId, input::Input, rng::RngSource};
-use bevy::prelude::*;
+use bevy::{prelude::*, window::PrimaryWindow};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
 
@@ -169,18 +169,35 @@ fn control_system(
     query: Query<&ActionState<Input>>,
     mut tick_event: EventWriter<TickEvent>,
     mut rate: ResMut<TickRate>,
+    board: Res<Board>,
+    mut states: ResMut<CellStates>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let query = query.single();
-    if query.just_pressed(&Input::Step) {
+    let input = query.single();
+    if input.just_pressed(&Input::Step) {
         tick_event.send(TickEvent);
     }
 
-    if query.just_pressed(&Input::Fast) {
+    if input.just_pressed(&Input::Fast) {
         rate.fast();
     }
 
-    if query.just_released(&Input::Fast) {
+    if input.just_released(&Input::Fast) {
         rate.normal();
+    }
+
+    if input.pressed(&Input::Select) {
+        let (camera, camera_transform) = camera.single();
+        let window = window.single();
+        if let Some(world_position) = window
+            .cursor_position()
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+            .map(|ray| ray.origin.truncate())
+        {
+            let hex = board.layout.world_pos_to_hex(world_position);
+            states.set(hex, StateId::Air);
+        }
     }
 }
 
