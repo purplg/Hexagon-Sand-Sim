@@ -20,12 +20,9 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_plugins(EguiPlugin);
         app.add_plugins(DefaultInspectorConfigPlugin);
         app.add_systems(Update, metrics_system);
-        app.add_systems(Startup, setup_system);
         app.add_systems(Update, update_system);
     }
 }
-
-fn setup_system() {}
 
 fn update_system(world: &mut World) {
     let mut egui_ctx = world
