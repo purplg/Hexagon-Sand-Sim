@@ -9,7 +9,12 @@ use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorO
 use rand::Rng;
 pub use state::{Board, States};
 
-use crate::{cell::StateId, input::Input, rng::RngSource, ui::Palette};
+use crate::{
+    cell::{Air, Fire, Sand, StateId, StateRegistry, Steam, Water},
+    input::Input,
+    rng::RngSource,
+    ui::Palette,
+};
 use bevy::{prelude::*, window::PrimaryWindow};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
@@ -41,6 +46,14 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(PreUpdate, sim_system.run_if(on_event::<TickEvent>()));
         app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
         app.add_systems(Update, render_system);
+
+        let mut registry = StateRegistry::default();
+        registry.add(Air);
+        registry.add(Fire);
+        registry.add(Sand);
+        registry.add(Water);
+        registry.add(Steam);
+        app.insert_resource(registry);
     }
 }
 
@@ -143,13 +156,17 @@ fn tick_system(
 }
 
 /// System to run the simulation every frame.
-fn sim_system(mut states: ResMut<States>, mut rng: ResMut<RngSource>) {
+fn sim_system(
+    mut states: ResMut<States>,
+    registry: Res<StateRegistry>,
+    mut rng: ResMut<RngSource>,
+) {
     for step in states
         .current
         .iter()
-        .filter_map(|(hex, state)| state.tick(*hex, &states, &mut rng.0))
+        .filter_map(|(hex, id)| registry.get(id).map(|tickable| (hex, tickable)))
+        .filter_map(|(hex, tickable)| tickable.tick(*hex, &states, &mut rng))
         .collect::<Vec<_>>()
-        .into_iter()
     {
         step.apply(&mut states);
     }

@@ -26,13 +26,14 @@ impl States {
 
     /// Get the future [`StateId`] of a cell.
     pub fn get_next(&self, hex: impl Into<Hex>) -> Option<&StateId> {
-        self.next.get(&hex.into())
+        let hex = hex.into() ;
+        self.next.get(&hex).or_else(|| self.get_current(hex))
     }
 
     /// Return `true` if a `hex` has one of `state`.
     pub fn is_state(&self, hex: Hex, state: impl IntoIterator<Item = StateId>) -> bool {
-        self.get_current(hex)
-            .map(|id| state.into_iter().find(|other_id| id == other_id).is_some())
+        self.get_next(hex)
+            .map(|id| state.into_iter().any(|other_id| id == &other_id))
             .unwrap_or(false)
     }
 

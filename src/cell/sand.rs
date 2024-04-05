@@ -1,14 +1,24 @@
 use hexx::{EdgeDirection, Hex};
+use rand::rngs::SmallRng;
 
 use crate::grid::States;
 
-use super::{Behavior, StateId::*, StepKind};
+use super::{
+    behavior::{self, StepKind},
+    Register,
+    StateId::{self, *},
+    Tickable,
+};
 
 pub struct Sand;
 
-impl Behavior for Sand {
-    fn tick(from: Hex, states: &States, rng: impl rand::Rng) -> Option<StepKind> {
-        Self::slide(
+impl Register for Sand {
+    const ID: StateId = StateId::Sand;
+}
+
+impl Tickable for Sand {
+    fn tick(&self, from: Hex, states: &States, rng: &mut SmallRng) -> Option<StepKind> {
+        behavior::slide(
             from,
             [
                 EdgeDirection::POINTY_BOTTOM_LEFT,

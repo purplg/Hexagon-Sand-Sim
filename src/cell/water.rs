@@ -1,17 +1,27 @@
 use hexx::{EdgeDirection, Hex};
+use rand::rngs::SmallRng;
 
 use crate::grid::States;
 
-use super::{Behavior, Set, StateId::*, StepKind};
+use super::{
+    behavior::{self, Set, StepKind},
+    Register,
+    StateId::{self, *},
+    Tickable,
+};
 
 pub struct Water;
 
-impl Behavior for Water {
-    fn tick(from: Hex, states: &States, mut rng: impl rand::Rng) -> Option<StepKind> {
-        Self::try_evaporate(from, &mut rng)
+impl Register for Water {
+    const ID: StateId = StateId::Water;
+}
+
+impl Tickable for Water {
+    fn tick(&self, from: Hex, states: &States, mut rng: &mut SmallRng) -> Option<StepKind> {
+        Self::try_evaporate(from, rng)
             // Try to move down
             .or_else(|| {
-                Self::slide(
+                behavior::slide(
                     from,
                     [
                         EdgeDirection::POINTY_BOTTOM_LEFT,
@@ -24,7 +34,7 @@ impl Behavior for Water {
             })
             // If it can't move down, move laterally.
             .or_else(|| {
-                Self::slide(
+                behavior::slide(
                     from,
                     [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
                     [Air],
@@ -37,7 +47,7 @@ impl Behavior for Water {
 
 impl Water {
     /// Chance to turn back into steam.
-    fn try_evaporate(from: Hex, mut rng: impl rand::Rng) -> Option<StepKind> {
+    fn try_evaporate(from: Hex, rng: &mut impl rand::Rng) -> Option<StepKind> {
         let precipitate: f32 = rng.gen();
         if precipitate < 0.0001 {
             Some(StepKind::Set(Set {

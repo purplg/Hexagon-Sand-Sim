@@ -1,30 +1,42 @@
 use hexx::{EdgeDirection, Hex};
+use rand::rngs::SmallRng;
 
 use crate::grid::States;
 
-use super::{Behavior, Set, StateId::*, StepKind};
+use super::{
+    behavior::{self, Set, StepKind},
+    Register,
+    StateId::{self, *},
+    Tickable,
+};
 
 pub struct Steam;
 
-impl Behavior for Steam {
-    fn tick(from: Hex, states: &States, mut rng: impl rand::Rng) -> Option<StepKind> {
+impl Register for Steam {
+    const ID: StateId = StateId::Steam;
+}
+
+impl Tickable for Steam {
+    fn tick(&self, from: Hex, states: &States, mut rng: &mut SmallRng) -> Option<StepKind> {
         Self::try_condense(from, &mut rng)
             // Try to move up
             .or_else(|| {
-                Self::slide(
+                behavior::slide(
                     from,
                     [
+                        EdgeDirection::POINTY_LEFT,
+                        EdgeDirection::POINTY_RIGHT,
                         EdgeDirection::POINTY_TOP_LEFT,
                         EdgeDirection::POINTY_TOP_RIGHT,
                     ],
-                    [Air, Fire, Water],
+                    [Air, Water],
                     states,
                     &mut rng,
                 )
             })
             // If it can't move up, move laterally.
             .or_else(|| {
-                Self::slide(
+                behavior::slide(
                     from,
                     [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
                     [Air, Fire, Water],
