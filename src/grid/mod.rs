@@ -9,7 +9,7 @@ use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorO
 use rand::Rng;
 pub use state::{Board, States};
 
-use crate::{cell::StateId, input::Input, rng::RngSource};
+use crate::{cell::StateId, input::Input, rng::RngSource, ui::Palette};
 use bevy::{prelude::*, window::PrimaryWindow};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
@@ -68,11 +68,7 @@ impl SimState {
 struct TickEvent;
 
 /// Generate a fresh board.
-pub fn startup_system(
-    board: Res<Board>,
-    mut states: ResMut<States>,
-    mut rng: ResMut<RngSource>,
-) {
+pub fn startup_system(board: Res<Board>, mut states: ResMut<States>, mut rng: ResMut<RngSource>) {
     states.current.clear();
     states.next.clear();
     for hex in board.bounds.all_coords() {
@@ -171,6 +167,7 @@ fn control_system(
     mut rate: ResMut<TickRate>,
     board: Res<Board>,
     mut states: ResMut<States>,
+    palette: Res<Palette>,
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -196,8 +193,10 @@ fn control_system(
             .map(|ray| ray.origin.truncate())
         {
             let hex = board.layout.world_pos_to_hex(world_position);
-            if board.bounds.is_in_bounds(hex) {
-                states.set(hex, StateId::Air);
+            for hex in hex.rings(0..palette.brush_size).flatten() {
+                if board.bounds.is_in_bounds(hex) {
+                    states.set(hex, palette.selected);
+                }
             }
         }
     }

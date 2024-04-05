@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use bevy::{ecs::system::RunSystemOnce, prelude::*, window::PrimaryWindow};
 use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
@@ -9,7 +11,7 @@ use bevy_inspector_egui::{
 
 use crate::{
     cell::StateId,
-    grid::{self, Board, States, SimState, TickRate},
+    grid::{self, Board, SimState, States, TickRate},
 };
 
 pub(super) struct Plugin;
@@ -17,6 +19,7 @@ pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Metrics>();
+        app.init_resource::<Palette>();
         app.add_plugins(EguiPlugin);
         app.add_plugins(DefaultInspectorConfigPlugin);
         app.add_systems(Update, metrics_system);
@@ -38,10 +41,11 @@ fn update_system(world: &mut World) {
             let mut timer = world.resource_mut::<TickRate>();
             ui.heading("Tick Rate");
             let mut speed = timer.duration().as_millis() as u64;
-            let response = ui
-                .add(egui::Slider::new(&mut speed, 0..=1000))
-                .on_hover_text("Adjust the speed of the simulation.");
-            if response.dragged() {
+            if ui
+                .add(egui::Slider::new(&mut speed, 0..=100))
+                .on_hover_text("Adjust the speed of the simulation.")
+                .dragged()
+            {
                 timer.set_normal(speed);
             }
         });
@@ -71,6 +75,18 @@ fn update_system(world: &mut World) {
                     states.next.clear();
                 }
             });
+        });
+    });
+
+    egui::TopBottomPanel::bottom("pallete").show(egui_ctx.get_mut(), |ui| {
+        ui.horizontal(|ui| {
+            let mut palette = world.resource_mut::<Palette>();
+            ui.add(egui::Slider::new(&mut palette.brush_size, 0..=10));
+            ui.radio_value(&mut palette.selected, StateId::Air, "Air");
+            ui.radio_value(&mut palette.selected, StateId::Fire, "Fire");
+            ui.radio_value(&mut palette.selected, StateId::Sand, "Sand");
+            ui.radio_value(&mut palette.selected, StateId::Water, "Water");
+            ui.radio_value(&mut palette.selected, StateId::Steam, "Steam");
         });
     });
 }
@@ -103,4 +119,33 @@ fn metrics_system(states: Res<States>, mut metrics: ResMut<Metrics>) {
     }
     metrics.total = metrics.fire + metrics.sand + metrics.water + metrics.steam;
     metrics.movement = states.next.keys().count();
+}
+
+#[derive(Resource)]
+pub struct Palette {
+    pub selected: StateId,
+    pub brush_size: u32,
+}
+
+impl Deref for Palette {
+    type Target = StateId;
+
+    fn deref(&self) -> &Self::Target {
+        &self.selected
+    }
+}
+
+impl DerefMut for Palette {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.selected
+    }
+}
+
+impl Default for Palette {
+    fn default() -> Self {
+        Self {
+            selected: StateId::Air,
+            brush_size: 2,
+        }
+    }
 }
