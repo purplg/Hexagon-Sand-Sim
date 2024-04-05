@@ -1,14 +1,14 @@
 use hexx::{EdgeDirection, Hex};
 use rand::seq::IteratorRandom;
 
-use crate::grid::CellStates;
+use crate::grid::States;
 
 use super::{Behavior, Set, StateId, StateId::*, StepKind, Swap};
 
 pub struct Fire;
 
 impl Behavior for Fire {
-    fn tick(from: Hex, states: &CellStates, rng: impl rand::RngCore) -> Option<StepKind> {
+    fn tick(from: Hex, states: &States, rng: impl rand::RngCore) -> Option<StepKind> {
         Self::slide(
             from,
             [
@@ -25,7 +25,7 @@ impl Behavior for Fire {
         from: Hex,
         directions: D,
         _with_state: S,
-        states: &CellStates,
+        states: &States,
         mut rng: impl rand::Rng,
     ) -> Option<StepKind>
     where

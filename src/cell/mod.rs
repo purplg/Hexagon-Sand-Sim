@@ -19,7 +19,7 @@ pub enum StateId {
 }
 
 impl StateId {
-    pub fn tick(&self, hex: Hex, states: &CellStates, mut rng: impl rand::Rng) -> Option<StepKind> {
+    pub fn tick(&self, hex: Hex, states: &States, mut rng: impl rand::Rng) -> Option<StepKind> {
         match self {
             StateId::Air => Air::tick(hex, states, &mut rng),
             StateId::Fire => Fire::tick(hex, states, &mut rng),
@@ -30,7 +30,7 @@ impl StateId {
     }
 }
 
-use crate::grid::CellStates;
+use crate::grid::States;
 use hexx::{EdgeDirection, Hex};
 use rand::seq::IteratorRandom;
 
@@ -41,7 +41,7 @@ impl From<StateId> for Vec<StateId> {
 }
 
 pub trait Behavior {
-    fn tick(_from: Hex, _states: &CellStates, mut _rng: impl rand::Rng) -> Option<StepKind> {
+    fn tick(_from: Hex, _states: &States, mut _rng: impl rand::Rng) -> Option<StepKind> {
         None
     }
 
@@ -50,7 +50,7 @@ pub trait Behavior {
         from: Hex,
         directions: D,
         with_state: S,
-        states: &CellStates,
+        states: &States,
         mut rng: impl rand::Rng,
     ) -> Option<StepKind>
     where
@@ -86,7 +86,7 @@ impl std::ops::Deref for StepKind {
 }
 
 pub trait Step {
-    fn apply(&self, states: &mut CellStates);
+    fn apply(&self, states: &mut States);
 }
 
 #[derive(Clone, Copy)]
@@ -96,7 +96,7 @@ pub struct Swap {
 }
 
 impl Step for Swap {
-    fn apply(&self, states: &mut CellStates) {
+    fn apply(&self, states: &mut States) {
         if states.any_set([self.from, self.to]) {
             return;
         }
@@ -114,7 +114,7 @@ pub struct Set {
 }
 
 impl Step for Set {
-    fn apply(&self, states: &mut CellStates) {
+    fn apply(&self, states: &mut States) {
         if states.any_set([self.hex]) {
             return;
         }
@@ -125,7 +125,7 @@ impl Step for Set {
 
 /// Set the state of many cells.
 impl Step for Vec<Set> {
-    fn apply(&self, states: &mut CellStates) {
+    fn apply(&self, states: &mut States) {
         let positions = self.into_iter().map(|set| set.hex);
         if states.any_set(positions) {
             return;

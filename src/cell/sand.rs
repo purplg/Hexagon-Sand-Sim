@@ -1,13 +1,13 @@
 use hexx::{EdgeDirection, Hex};
 
-use crate::grid::CellStates;
+use crate::grid::States;
 
 use super::{Behavior, StateId::*, StepKind};
 
 pub struct Sand;
 
 impl Behavior for Sand {
-    fn tick(from: Hex, states: &CellStates, rng: impl rand::Rng) -> Option<StepKind> {
+    fn tick(from: Hex, states: &States, rng: impl rand::Rng) -> Option<StepKind> {
         Self::slide(
             from,
             [

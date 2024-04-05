@@ -7,7 +7,7 @@ use std::{
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use rand::Rng;
-pub use state::{Board, CellStates};
+pub use state::{Board, States};
 
 use crate::{cell::StateId, input::Input, rng::RngSource};
 use bevy::{prelude::*, window::PrimaryWindow};
@@ -27,7 +27,7 @@ impl bevy::prelude::Plugin for Plugin {
             },
             bounds: HexBounds::from_radius(64),
         });
-        app.init_resource::<CellStates>();
+        app.init_resource::<States>();
         app.insert_resource(TickRate::new(Duration::from_millis(50)));
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
@@ -70,7 +70,7 @@ struct TickEvent;
 /// Generate a fresh board.
 pub fn startup_system(
     board: Res<Board>,
-    mut states: ResMut<CellStates>,
+    mut states: ResMut<States>,
     mut rng: ResMut<RngSource>,
 ) {
     states.current.clear();
@@ -147,7 +147,7 @@ fn tick_system(
 }
 
 /// System to run the simulation every frame.
-fn sim_system(mut states: ResMut<CellStates>, mut rng: ResMut<RngSource>) {
+fn sim_system(mut states: ResMut<States>, mut rng: ResMut<RngSource>) {
     for step in states
         .current
         .iter()
@@ -160,7 +160,7 @@ fn sim_system(mut states: ResMut<CellStates>, mut rng: ResMut<RngSource>) {
 }
 
 /// Move all the queued states into the current state.
-fn flush_system(mut states: ResMut<CellStates>) {
+fn flush_system(mut states: ResMut<States>) {
     states.tick();
 }
 
@@ -170,7 +170,7 @@ fn control_system(
     mut tick_event: EventWriter<TickEvent>,
     mut rate: ResMut<TickRate>,
     board: Res<Board>,
-    mut states: ResMut<CellStates>,
+    mut states: ResMut<States>,
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -204,7 +204,7 @@ fn control_system(
 }
 
 /// System to render the cells on the board... using Gizmos!
-fn render_system(mut draw: Gizmos, board: Res<Board>, states: Res<CellStates>) {
+fn render_system(mut draw: Gizmos, board: Res<Board>, states: Res<States>) {
     // HACK Why 0.7? I don't know but it lines up...
     let size = board.layout.hex_size.length() * 0.7;
 

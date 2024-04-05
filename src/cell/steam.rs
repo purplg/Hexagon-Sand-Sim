@@ -1,13 +1,13 @@
 use hexx::{EdgeDirection, Hex};
 
-use crate::grid::CellStates;
+use crate::grid::States;
 
 use super::{Behavior, Set, StateId::*, StepKind};
 
 pub struct Steam;
 
 impl Behavior for Steam {
-    fn tick(from: Hex, states: &CellStates, mut rng: impl rand::Rng) -> Option<StepKind> {
+    fn tick(from: Hex, states: &States, mut rng: impl rand::Rng) -> Option<StepKind> {
         Self::try_condense(from, &mut rng)
             // Try to move up
             .or_else(|| {
