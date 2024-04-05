@@ -6,7 +6,7 @@ use crate::grid::States;
 use super::StateId;
 
 /// Try to swap with another cell `with_state` in a particular `direction`.
-pub fn slide<D, S>(
+pub fn swap<D, S>(
     from: Hex,
     directions: D,
     with_state: S,

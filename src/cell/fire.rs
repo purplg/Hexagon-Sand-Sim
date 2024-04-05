@@ -13,7 +13,7 @@ impl Register for Fire {
 
 impl Tickable for Fire {
     fn tick(&self, from: Hex, states: &States, rng: &mut SmallRng) -> Option<StepKind> {
-        behavior::slide(
+        behavior::swap(
             from,
             [
                 EdgeDirection::POINTY_LEFT,

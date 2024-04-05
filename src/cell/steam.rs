@@ -21,7 +21,7 @@ impl Tickable for Steam {
         Self::try_condense(from, &mut rng)
             // Try to move up
             .or_else(|| {
-                behavior::slide(
+                behavior::swap(
                     from,
                     [
                         EdgeDirection::POINTY_LEFT,
@@ -36,7 +36,7 @@ impl Tickable for Steam {
             })
             // If it can't move up, move laterally.
             .or_else(|| {
-                behavior::slide(
+                behavior::swap(
                     from,
                     [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
                     [Air, Fire, Water],

@@ -21,7 +21,7 @@ impl Tickable for Water {
         Self::try_evaporate(from, rng)
             // Try to move down
             .or_else(|| {
-                behavior::slide(
+                behavior::swap(
                     from,
                     [
                         EdgeDirection::POINTY_BOTTOM_LEFT,
@@ -34,7 +34,7 @@ impl Tickable for Water {
             })
             // If it can't move down, move laterally.
             .or_else(|| {
-                behavior::slide(
+                behavior::swap(
                     from,
                     [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
                     [Air],

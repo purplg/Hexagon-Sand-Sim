@@ -18,7 +18,7 @@ impl Register for Sand {
 
 impl Tickable for Sand {
     fn tick(&self, from: Hex, states: &States, rng: &mut SmallRng) -> Option<StepKind> {
-        behavior::slide(
+        behavior::swap(
             from,
             [
                 EdgeDirection::POINTY_BOTTOM_LEFT,
