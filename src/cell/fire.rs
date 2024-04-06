@@ -4,7 +4,7 @@ use rand::rngs::SmallRng;
 use crate::grid::States;
 
 use super::{
-    behavior::{Chance, RandomSwap, Set, Step},
+    behavior::{Chance, Infect, RandomSwap, Set, Step},
     BoardSlice, Register, StateId, Tick,
 };
 
@@ -15,7 +15,7 @@ impl Register for Fire {
 }
 
 impl Tick for Fire {
-    fn tick(&self, hex: Hex, states: &States, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: Hex, states: &States, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
             step: Set {
                 hex,
@@ -24,7 +24,22 @@ impl Tick for Fire {
             chance: 0.005,
         }
         .apply_or(
-            rng,
+            &mut rng,
+            states,
+            Infect {
+                from: hex,
+                directions: [
+                    EdgeDirection::POINTY_LEFT,
+                    EdgeDirection::POINTY_RIGHT,
+                    EdgeDirection::POINTY_TOP_LEFT,
+                    EdgeDirection::POINTY_TOP_RIGHT,
+                ],
+                with_state: [StateId::Water],
+                into: StateId::Steam,
+            },
+        )
+        .apply_or(
+            &mut rng,
             states,
             RandomSwap {
                 from: hex,

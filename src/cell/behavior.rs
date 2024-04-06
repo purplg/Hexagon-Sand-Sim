@@ -17,6 +17,35 @@ pub trait Step {
     }
 }
 
+/// Convert other nearby cells into another state on collision.
+pub struct Infect<D, S>
+where
+    D: IntoIterator<Item = EdgeDirection>,
+    S: IntoIterator<Item = StateId>,
+{
+    pub from: Hex,
+    pub directions: D,
+    pub with_state: S,
+    pub into: StateId,
+}
+
+impl<D, S> Step for Infect<D, S>
+where
+    D: IntoIterator<Item = EdgeDirection>,
+    S: IntoIterator<Item = StateId>,
+{
+    fn apply<R: rand::Rng>(self, mut rng: R, states: &States) -> Option<BoardSlice> {
+        let to = self
+            .from
+            .neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
+        if states.is_state(to, self.with_state) {
+            Some(BoardSlice(vec![(to, self.into)]))
+        } else {
+            None
+        }
+    }
+}
+
 pub struct Chance<S: Step> {
     pub step: S,
     pub chance: f32,
