@@ -26,7 +26,7 @@ impl Tick for Water {
             },
             chance: 0.0001,
         }
-        // Drag stuff down
+        // Drag sand
         .apply_or(
             &mut rng,
             states,
