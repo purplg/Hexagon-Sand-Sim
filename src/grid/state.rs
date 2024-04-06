@@ -2,7 +2,7 @@ use bevy::{prelude::*, utils::HashMap};
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use hexx::*;
 
-use crate::cell::StateId;
+use crate::cell::{BoardSlice, StateId};
 
 /// Lookup Entity IDs from their position on the board.
 #[derive(Resource, Default, Deref, DerefMut)]
@@ -26,7 +26,7 @@ impl States {
 
     /// Get the future [`StateId`] of a cell.
     pub fn get_next(&self, hex: impl Into<Hex>) -> Option<&StateId> {
-        let hex = hex.into() ;
+        let hex = hex.into();
         self.next.get(&hex).or_else(|| self.get_current(hex))
     }
 
@@ -35,6 +35,16 @@ impl States {
         self.get_next(hex)
             .map(|id| state.into_iter().any(|other_id| id == &other_id))
             .unwrap_or(false)
+    }
+
+    pub fn find_state(
+        &self,
+        hex: Hex,
+        state: impl IntoIterator<Item = StateId>,
+    ) -> Option<StateId> {
+        self.get_current(hex)
+            .map(|id| state.into_iter().find(|other_id| id == other_id))
+            .flatten()
     }
 
     /// Set the future state of a cell.
@@ -48,6 +58,15 @@ impl States {
 
     pub fn any_set(&self, hexs: impl IntoIterator<Item = Hex>) -> bool {
         hexs.into_iter().any(|hex| self.is_set(hex))
+    }
+
+    pub fn apply(&mut self, mut slice: BoardSlice) {
+        if slice.iter().any(|(hex, _id)| self.next.contains_key(hex)) {
+            return;
+        }
+        for (hex, id) in slice.drain(0..) {
+            self.next.insert(hex, id);
+        }
     }
 
     /// Apply all changes in [`Self::next`] to [`Self::current`].

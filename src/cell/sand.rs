@@ -4,10 +4,10 @@ use rand::rngs::SmallRng;
 use crate::grid::States;
 
 use super::{
-    behavior::{self, StepKind},
-    Register,
+    behavior::{RandomSwap, Step},
+    BoardSlice, Register,
     StateId::{self, *},
-    Tickable,
+    Tick,
 };
 
 pub struct Sand;
@@ -16,17 +16,16 @@ impl Register for Sand {
     const ID: StateId = StateId::Sand;
 }
 
-impl Tickable for Sand {
-    fn tick(&self, from: Hex, states: &States, rng: &mut SmallRng) -> Option<StepKind> {
-        behavior::swap(
+impl Tick for Sand {
+    fn tick(&self, from: Hex, states: &States, rng: &mut SmallRng) -> Option<BoardSlice> {
+        RandomSwap {
             from,
-            [
+            directions: [
                 EdgeDirection::POINTY_BOTTOM_LEFT,
                 EdgeDirection::POINTY_BOTTOM_RIGHT,
             ],
-            [Air, Water],
-            states,
-            rng,
-        )
+            with_state: [Air, Water],
+        }
+        .apply(rng, &states)
     }
 }

@@ -16,8 +16,6 @@ use bevy::prelude::*;
 use hexx::Hex;
 use rand::rngs::SmallRng;
 
-use self::behavior::StepKind;
-
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum StateId {
     Air,
@@ -29,24 +27,27 @@ pub enum StateId {
 
 #[derive(Resource, Default)]
 pub struct StateRegistry {
-    inner: HashMap<StateId, Box<dyn Tickable + Send + Sync>>,
+    inner: HashMap<StateId, Box<dyn Tick + Send + Sync>>,
 }
 
 impl StateRegistry {
-    pub fn get(&self, id: &StateId) -> Option<&Box<dyn Tickable + Send + Sync>> {
+    pub fn get(&self, id: &StateId) -> Option<&Box<dyn Tick + Send + Sync>> {
         self.inner.get(id)
     }
 
     pub fn add<T>(&mut self, tickable: T)
     where
-        T: Register + Tickable + Send + Sync + 'static,
+        T: Register + Tick + Send + Sync + 'static,
     {
         self.inner.insert(T::ID, Box::new(tickable));
     }
 }
 
-pub trait Tickable {
-    fn tick(&self, _from: Hex, _states: &States, _rng: &mut SmallRng) -> Option<StepKind> {
+#[derive(Deref, DerefMut)]
+pub struct BoardSlice(Vec<(Hex, StateId)>);
+
+pub trait Tick {
+    fn tick(&self, _from: Hex, _states: &States, _rng: &mut SmallRng) -> Option<BoardSlice> {
         None
     }
 }

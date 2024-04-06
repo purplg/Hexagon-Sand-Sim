@@ -3,49 +3,78 @@ use rand::seq::IteratorRandom;
 
 use crate::grid::States;
 
-use super::StateId;
+use super::{BoardSlice, StateId};
 
-/// Try to swap with another cell `with_state` in a particular `direction`.
-pub fn swap<D, S>(
-    from: Hex,
-    directions: D,
-    with_state: S,
-    states: &States,
-    mut rng: impl rand::Rng,
-) -> Option<StepKind>
-where
-    D: IntoIterator<Item = EdgeDirection>,
-    S: IntoIterator<Item = StateId>,
-{
-    let to = from.neighbor(directions.into_iter().choose(&mut rng).unwrap());
-    if states.is_state(to, with_state) {
-        Some(StepKind::Swap(Swap { to, from }))
-    } else {
-        None
+pub trait Step {
+    fn apply<R: rand::Rng>(self, _rng: R, states: &States) -> Option<BoardSlice>;
+
+    fn apply_or<R: rand::Rng>(self, mut rng: R, states: &States, s: impl Step) -> Option<BoardSlice>
+    where
+        Self: Sized,
+    {
+        self.apply(&mut rng, states)
+            .or_else(|| s.apply(&mut rng, states))
     }
 }
 
-#[derive(Clone)]
-pub enum StepKind {
-    Swap(Swap),
-    Set(Set),
-    SetMany(Vec<Set>),
+pub struct Chance<S: Step> {
+    pub step: S,
+    pub chance: f32,
 }
 
-impl std::ops::Deref for StepKind {
-    type Target = dyn Step;
+impl<S: Step> Chance<S> {
+    pub fn new(step: S, chance: f32) -> Self {
+        Self { step, chance }
+    }
+}
 
-    fn deref(&self) -> &Self::Target {
-        match self {
-            StepKind::Swap(inner) => inner,
-            StepKind::Set(inner) => inner,
-            StepKind::SetMany(inner) => inner,
+impl<S> Step for Chance<S>
+where
+    S: Step,
+{
+    fn apply<R: rand::Rng>(self, mut rng: R, states: &States) -> Option<BoardSlice> {
+        let attempt = rng.gen::<f32>();
+        if attempt < self.chance {
+            self.step.apply(rng, states)
+        } else {
+            None
         }
     }
 }
 
-pub trait Step {
-    fn apply(&self, states: &mut States);
+/// Try to swap with another cell `with_state` in some random `direction`.
+pub struct RandomSwap<D, S>
+where
+    D: IntoIterator<Item = EdgeDirection>,
+    S: IntoIterator<Item = StateId>,
+{
+    pub from: Hex,
+    pub directions: D,
+    pub with_state: S,
+}
+
+impl<D, S> Step for RandomSwap<D, S>
+where
+    D: IntoIterator<Item = EdgeDirection>,
+    S: IntoIterator<Item = StateId>,
+{
+    fn apply<R: rand::Rng>(self, mut rng: R, states: &States) -> Option<BoardSlice> {
+        let to = self
+            .from
+            .neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
+        states.find_state(to, self.with_state).map(|other| {
+            BoardSlice(vec![
+                (self.from, other),
+                (to, *states.get_current(self.from).unwrap()),
+            ])
+        })
+    }
+}
+
+impl Step for Option<BoardSlice> {
+    fn apply<R: rand::Rng>(self, _rng: R, _states: &States) -> Option<BoardSlice> {
+        self
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -55,13 +84,15 @@ pub struct Swap {
 }
 
 impl Step for Swap {
-    fn apply(&self, states: &mut States) {
+    fn apply<R: rand::Rng>(self, mut _rng: R, states: &States) -> Option<BoardSlice> {
         if states.any_set([self.from, self.to]) {
-            return;
+            None
+        } else {
+            Some(BoardSlice(vec![
+                (self.from, *states.get_current(self.to).unwrap()),
+                (self.to, *states.get_current(self.from).unwrap()),
+            ]))
         }
-
-        states.set(self.from, *states.get_current(self.to).unwrap());
-        states.set(self.to, *states.get_current(self.from).unwrap());
     }
 }
 
@@ -73,23 +104,11 @@ pub struct Set {
 }
 
 impl Step for Set {
-    fn apply(&self, states: &mut States) {
+    fn apply<R: rand::Rng>(self, mut _rng: R, states: &States) -> Option<BoardSlice> {
         if states.any_set([self.hex]) {
-            return;
+            None
+        } else {
+            Some(BoardSlice(vec![(self.hex, self.id)]))
         }
-
-        states.set(self.hex, self.id);
-    }
-}
-
-/// Set the state of many cells.
-impl Step for Vec<Set> {
-    fn apply(&self, states: &mut States) {
-        let positions = self.iter().map(|set| set.hex);
-        if states.any_set(positions) {
-            return;
-        }
-
-        self.iter().for_each(|set| set.apply(states))
     }
 }

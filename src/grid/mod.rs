@@ -161,14 +161,14 @@ fn sim_system(
     registry: Res<StateRegistry>,
     mut rng: ResMut<RngSource>,
 ) {
-    for step in states
+    let slices = states
         .current
         .iter()
         .filter_map(|(hex, id)| registry.get(id).map(|tickable| (hex, tickable)))
         .filter_map(|(hex, tickable)| tickable.tick(*hex, &states, &mut rng))
-        .collect::<Vec<_>>()
-    {
-        step.apply(&mut states);
+        .collect::<Vec<_>>();
+    for slice in slices {
+        states.apply(slice);
     }
 }
 
