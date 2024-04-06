@@ -5,6 +5,7 @@ use crate::grid::States;
 
 use super::{BoardSlice, StateId};
 
+/// A mutation of the board caused by a single cell.
 pub trait Step {
     fn apply<R: rand::Rng>(self, _rng: R, states: &States) -> Option<BoardSlice>;
 
@@ -14,6 +15,12 @@ pub trait Step {
     {
         self.apply(&mut rng, states)
             .or_else(|| s.apply(&mut rng, states))
+    }
+}
+
+impl Step for Option<BoardSlice> {
+    fn apply<R: rand::Rng>(self, _rng: R, _states: &States) -> Option<BoardSlice> {
+        self
     }
 }
 
@@ -46,15 +53,10 @@ where
     }
 }
 
+/// A chance for another step to occur.
 pub struct Chance<S: Step> {
     pub step: S,
     pub chance: f32,
-}
-
-impl<S: Step> Chance<S> {
-    pub fn new(step: S, chance: f32) -> Self {
-        Self { step, chance }
-    }
 }
 
 impl<S> Step for Chance<S>
@@ -100,13 +102,7 @@ where
     }
 }
 
-impl Step for Option<BoardSlice> {
-    fn apply<R: rand::Rng>(self, _rng: R, _states: &States) -> Option<BoardSlice> {
-        self
-    }
-}
-
-#[derive(Clone, Copy)]
+/// Swap places with another cell.
 pub struct Swap {
     from: Hex,
     to: Hex,
@@ -125,8 +121,7 @@ impl Step for Swap {
     }
 }
 
-/// Set the state of a cell.
-#[derive(Clone, Copy)]
+/// Set the state of a cell
 pub struct Set {
     pub hex: Hex,
     pub id: StateId,
