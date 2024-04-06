@@ -1,3 +1,4 @@
+use bevy::prelude::*;
 use hexx::{EdgeDirection, Hex};
 use rand::rngs::SmallRng;
 
@@ -5,7 +6,7 @@ use crate::grid::States;
 
 use super::{
     behavior::{Chance, Drag, RandomSwap, Set, Step},
-    BoardSlice, Register,
+    BoardSlice, HexColor, Register,
     StateId::{self, *},
     Tick,
 };
@@ -16,6 +17,14 @@ impl Register for Water {
     const ID: StateId = StateId::Water;
 }
 
+impl HexColor for Water {
+    const COLOR: Color = Color::Rgba {
+        red: 0.0,
+        green: 0.0,
+        blue: 1.0,
+        alpha: 1.0,
+    };
+}
 impl Tick for Water {
     fn tick(&self, from: Hex, states: &States, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         // Evaporate

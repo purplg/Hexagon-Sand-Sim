@@ -29,20 +29,28 @@ pub enum StateId {
 }
 
 #[derive(Resource, Default)]
-pub struct StateRegistry {
+pub struct CellRegistry {
     inner: HashMap<StateId, Box<dyn Tick + Send + Sync>>,
+    color: HashMap<StateId, Color>,
 }
 
-impl StateRegistry {
+impl CellRegistry {
+    pub fn add<T>(&mut self, tickable: T)
+    where
+        T: Register + HexColor + Tick + Send + Sync + 'static,
+    {
+        self.inner.insert(T::ID, Box::new(tickable));
+        self.color.insert(T::ID, T::COLOR);
+    }
+
     pub fn get(&self, id: &StateId) -> Option<&Box<dyn Tick + Send + Sync>> {
         self.inner.get(id)
     }
 
-    pub fn add<T>(&mut self, tickable: T)
-    where
-        T: Register + Tick + Send + Sync + 'static,
-    {
-        self.inner.insert(T::ID, Box::new(tickable));
+    pub fn color(&self, id: &StateId) -> &Color {
+        self.color
+            .get(id)
+            .expect(format!("StateID {:?} missing from Color registry", id).as_str())
     }
 }
 
@@ -63,4 +71,8 @@ impl From<StateId> for Vec<StateId> {
 
 pub trait Register {
     const ID: StateId;
+}
+
+pub trait HexColor {
+    const COLOR: Color;
 }

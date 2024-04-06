@@ -1,19 +1,26 @@
+use bevy::prelude::*;
 use hexx::{EdgeDirection, Hex};
 use rand::rngs::SmallRng;
 
 use crate::grid::States;
 
 use super::{
-    behavior::{Chance, Drag, Infect, Offscreen, RandomSwap, Set, Step},
-    BoardSlice, Register,
-    StateId::{self, *},
-    Tick,
+    behavior::{Chance, Drag, Infect, Offscreen, RandomSwap, Set, Step}, BoardSlice, HexColor, Register, StateId::{self, *}, Tick
 };
 
 pub struct Wind;
 
 impl Register for Wind {
     const ID: StateId = StateId::Wind;
+}
+
+impl HexColor for Wind {
+    const COLOR: Color = Color::Rgba {
+                red: 1.0,
+                green: 1.0,
+                blue: 1.0,
+                alpha: 0.2,
+            };
 }
 
 impl Tick for Wind {

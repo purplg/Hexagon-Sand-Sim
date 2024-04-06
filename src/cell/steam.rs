@@ -1,3 +1,4 @@
+use bevy::prelude::*;
 use hexx::{EdgeDirection, Hex};
 use rand::rngs::SmallRng;
 
@@ -5,7 +6,7 @@ use crate::grid::States;
 
 use super::{
     behavior::{Chance, RandomSwap, Set, Step},
-    BoardSlice, Register,
+    BoardSlice, HexColor, Register,
     StateId::{self, *},
     Tick,
 };
@@ -14,6 +15,15 @@ pub struct Steam;
 
 impl Register for Steam {
     const ID: StateId = StateId::Steam;
+}
+
+impl HexColor for Steam {
+    const COLOR: Color = Color::Rgba {
+        red: 0.0,
+        green: 0.0,
+        blue: 1.0,
+        alpha: 0.5,
+    };
 }
 
 impl Tick for Steam {

@@ -1,17 +1,21 @@
+use bevy::prelude::*;
 use hexx::Hex;
 use rand::rngs::SmallRng;
 
 use crate::grid::States;
 
 use super::{
-    behavior::{Chance, Set, Step},
-    BoardSlice, Register, StateId, Tick,
+    behavior::{Chance, Set, Step}, BoardSlice, HexColor, Register, StateId, Tick
 };
 
 pub struct Air;
 
 impl Register for Air {
     const ID: StateId = StateId::Air;
+}
+
+impl HexColor for Air {
+    const COLOR: Color = Color::NONE;
 }
 
 impl Tick for Air {

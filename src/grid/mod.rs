@@ -10,7 +10,7 @@ use rand::Rng;
 pub use state::{Board, States};
 
 use crate::{
-    cell::{Air, Fire, Sand, StateId, StateRegistry, Steam, Water, Wind},
+    cell::{Air, Fire, Sand, StateId, CellRegistry, Steam, Water, Wind},
     input::Input,
     rng::RngSource,
     ui::Palette,
@@ -47,7 +47,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
         app.add_systems(Update, render_system);
 
-        let mut registry = StateRegistry::default();
+        let mut registry = CellRegistry::default();
         registry.add(Air);
         registry.add(Fire);
         registry.add(Sand);
@@ -159,7 +159,7 @@ fn tick_system(
 /// System to run the simulation every frame.
 fn sim_system(
     mut states: ResMut<States>,
-    registry: Res<StateRegistry>,
+    registry: Res<CellRegistry>,
     mut rng: ResMut<RngSource>,
 ) {
     let slices = states
@@ -221,7 +221,12 @@ fn control_system(
 }
 
 /// System to render the cells on the board... using Gizmos!
-fn render_system(mut draw: Gizmos, board: Res<Board>, states: Res<States>) {
+fn render_system(
+    mut draw: Gizmos,
+    board: Res<Board>,
+    states: Res<States>,
+    registry: Res<CellRegistry>,
+) {
     // HACK Why 0.7? I don't know but it lines up...
     let size = board.layout.hex_size.length() * 0.7;
 
@@ -230,44 +235,7 @@ fn render_system(mut draw: Gizmos, board: Res<Board>, states: Res<States>) {
             RegularPolygon::new(size, 6),
             board.layout.hex_to_world_pos(*hex),
             0.0,
-            match id {
-                StateId::Wind => Color::Rgba {
-                    red: 1.0,
-                    green: 1.0,
-                    blue: 1.0,
-                    alpha: 0.2,
-                },
-                StateId::Air => Color::Rgba {
-                    red: 1.0,
-                    green: 1.0,
-                    blue: 1.0,
-                    alpha: 0.00,
-                },
-                StateId::Fire => Color::Rgba {
-                    red: 1.0,
-                    green: 0.0,
-                    blue: 0.0,
-                    alpha: 1.0,
-                },
-                StateId::Sand => Color::Rgba {
-                    red: 1.0,
-                    green: 1.0,
-                    blue: 0.0,
-                    alpha: 1.0,
-                },
-                StateId::Water => Color::Rgba {
-                    red: 0.0,
-                    green: 0.0,
-                    blue: 1.0,
-                    alpha: 1.0,
-                },
-                StateId::Steam => Color::Rgba {
-                    red: 0.0,
-                    green: 0.0,
-                    blue: 1.0,
-                    alpha: 0.5,
-                },
-            },
+            *registry.color(id),
         );
     }
 }

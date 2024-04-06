@@ -1,3 +1,4 @@
+use bevy::prelude::*;
 use hexx::{EdgeDirection, Hex};
 use rand::rngs::SmallRng;
 
@@ -5,13 +6,22 @@ use crate::grid::States;
 
 use super::{
     behavior::{Chance, Infect, RandomSwap, Set, Step},
-    BoardSlice, Register, StateId, Tick,
+    BoardSlice, HexColor, Register, StateId, Tick,
 };
 
 pub struct Fire;
 
 impl Register for Fire {
     const ID: StateId = StateId::Fire;
+}
+
+impl HexColor for Fire {
+    const COLOR: Color = Color::Rgba {
+        red: 1.0,
+        green: 0.0,
+        blue: 0.0,
+        alpha: 1.0,
+    };
 }
 
 impl Tick for Fire {
