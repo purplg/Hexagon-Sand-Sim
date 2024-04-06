@@ -4,7 +4,7 @@ use rand::rngs::SmallRng;
 use crate::grid::States;
 
 use super::{
-    behavior::{Chance, RandomSwap, Set, Step},
+    behavior::{Chance, Drag, RandomSwap, Set, Step},
     BoardSlice, Register,
     StateId::{self, *},
     Tick,
@@ -26,6 +26,22 @@ impl Tick for Water {
             },
             chance: 0.0001,
         }
+        // Drag stuff down
+        .apply_or(
+            &mut rng,
+            states,
+            Drag {
+                from,
+                directions: [
+                    EdgeDirection::POINTY_LEFT,
+                    EdgeDirection::POINTY_RIGHT,
+                    EdgeDirection::POINTY_BOTTOM_LEFT,
+                    EdgeDirection::POINTY_BOTTOM_RIGHT,
+                ],
+                open: [Air, Self::ID],
+                drag: [Sand],
+            },
+        )
         // Move down
         .apply_or(
             &mut rng,

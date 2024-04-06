@@ -53,6 +53,47 @@ where
     }
 }
 
+/// Drag another cell.
+pub struct Drag<D, S, P>
+where
+    D: IntoIterator<Item = EdgeDirection>,
+    S: IntoIterator<Item = StateId>,
+    P: IntoIterator<Item = StateId>,
+{
+    pub from: Hex,
+    pub directions: D,
+    pub open: S,
+    pub drag: P,
+}
+
+impl<D, S, P> Step for Drag<D, S, P>
+where
+    D: IntoIterator<Item = EdgeDirection>,
+    S: IntoIterator<Item = StateId>,
+    P: IntoIterator<Item = StateId>,
+{
+    fn apply<R: rand::Rng>(self, rng: R, states: &States) -> Option<BoardSlice> {
+        let swap = RandomSwap {
+            from: self.from,
+            directions: self.directions,
+            with_state: self.open,
+        };
+        let ((from, from_id), (to, to_id)) = swap.into_components(rng, states)?;
+        let dir = to.main_direction_to(from);
+        let drag = from.neighbor(dir);
+        let drag_id = *states.get_current(drag)?;
+        if states.is_state(drag, self.drag) {
+            Some(BoardSlice(vec![
+                (from, drag_id),
+                (to, from_id),
+                (drag, to_id),
+            ]))
+        } else {
+            None
+        }
+    }
+}
+
 /// A chance for another step to occur.
 pub struct Chance<S: Step> {
     pub step: S,
@@ -89,15 +130,30 @@ where
     D: IntoIterator<Item = EdgeDirection>,
     S: IntoIterator<Item = StateId>,
 {
-    fn apply<R: rand::Rng>(self, mut rng: R, states: &States) -> Option<BoardSlice> {
+    fn apply<R: rand::Rng>(self, rng: R, states: &States) -> Option<BoardSlice> {
+        let (from, to) = self.into_components(rng, states)?;
+        Some(BoardSlice(vec![from, to]))
+    }
+}
+
+impl<D, S> RandomSwap<D, S>
+where
+    D: IntoIterator<Item = EdgeDirection>,
+    S: IntoIterator<Item = StateId>,
+{
+    fn into_components(
+        self,
+        mut rng: impl rand::Rng,
+        states: &States,
+    ) -> Option<((Hex, StateId), (Hex, StateId))> {
         let to = self
             .from
             .neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
         states.find_state(to, self.with_state).map(|other| {
-            BoardSlice(vec![
+            (
                 (self.from, other),
                 (to, *states.get_current(self.from).unwrap()),
-            ])
+            )
         })
     }
 }
