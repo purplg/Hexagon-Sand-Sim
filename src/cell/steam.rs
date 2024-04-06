@@ -36,7 +36,7 @@ impl Tick for Steam {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                with_state: [Air, Water],
+                open: [Air, Water],
             },
         )
         // Move laterally.
@@ -46,7 +46,7 @@ impl Tick for Steam {
             RandomSwap {
                 from,
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                with_state: [Air, Water, Fire],
+                open: [Air, Water, Fire],
             },
         )
     }

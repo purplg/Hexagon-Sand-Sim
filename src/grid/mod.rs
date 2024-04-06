@@ -10,7 +10,7 @@ use rand::Rng;
 pub use state::{Board, States};
 
 use crate::{
-    cell::{Air, Fire, Sand, StateId, StateRegistry, Steam, Water},
+    cell::{Air, Fire, Sand, StateId, StateRegistry, Steam, Water, Wind},
     input::Input,
     rng::RngSource,
     ui::Palette,
@@ -53,6 +53,7 @@ impl bevy::prelude::Plugin for Plugin {
         registry.add(Sand);
         registry.add(Water);
         registry.add(Steam);
+        registry.add(Wind);
         app.insert_resource(registry);
     }
 }
@@ -230,6 +231,12 @@ fn render_system(mut draw: Gizmos, board: Res<Board>, states: Res<States>) {
             board.layout.hex_to_world_pos(*hex),
             0.0,
             match id {
+                StateId::Wind => Color::Rgba {
+                    red: 1.0,
+                    green: 1.0,
+                    blue: 1.0,
+                    alpha: 0.2,
+                },
                 StateId::Air => Color::Rgba {
                     red: 1.0,
                     green: 1.0,
@@ -255,10 +262,10 @@ fn render_system(mut draw: Gizmos, board: Res<Board>, states: Res<States>) {
                     alpha: 1.0,
                 },
                 StateId::Steam => Color::Rgba {
-                    red: 1.0,
-                    green: 1.0,
+                    red: 0.0,
+                    green: 0.0,
                     blue: 1.0,
-                    alpha: 1.0,
+                    alpha: 0.5,
                 },
             },
         );

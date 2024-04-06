@@ -9,6 +9,8 @@ mod water;
 pub use water::Water;
 mod steam;
 pub use steam::Steam;
+mod wind;
+pub use wind::Wind;
 mod behavior;
 
 use crate::grid::States;
@@ -23,6 +25,7 @@ pub enum StateId {
     Sand,
     Water,
     Steam,
+    Wind,
 }
 
 #[derive(Resource, Default)]

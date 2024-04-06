@@ -87,6 +87,7 @@ fn update_system(world: &mut World) {
             ui.radio_value(&mut palette.selected, StateId::Sand, "Sand");
             ui.radio_value(&mut palette.selected, StateId::Water, "Water");
             ui.radio_value(&mut palette.selected, StateId::Steam, "Steam");
+            ui.radio_value(&mut palette.selected, StateId::Wind, "Wind");
         });
     });
 }
@@ -98,6 +99,7 @@ pub struct Metrics {
     sand: usize,
     water: usize,
     steam: usize,
+    wind: usize,
     total: usize,
     movement: usize,
 }
@@ -107,6 +109,7 @@ fn metrics_system(states: Res<States>, mut metrics: ResMut<Metrics>) {
     metrics.sand = 0;
     metrics.water = 0;
     metrics.steam = 0;
+    metrics.wind = 0;
     metrics.movement = 0;
     for state in states.current.values() {
         match state {
@@ -114,6 +117,7 @@ fn metrics_system(states: Res<States>, mut metrics: ResMut<Metrics>) {
             StateId::Sand => metrics.sand += 1,
             StateId::Water => metrics.water += 1,
             StateId::Steam => metrics.steam += 1,
+            StateId::Wind => metrics.wind += 1,
             StateId::Air => {}
         }
     }

@@ -24,6 +24,38 @@ impl Step for Option<BoardSlice> {
     }
 }
 
+/// Step off screen
+pub struct Offscreen<D, S>
+where
+    D: IntoIterator<Item = EdgeDirection>,
+    S: IntoIterator<Item = StateId>,
+{
+    pub from: Hex,
+    pub directions: D,
+    pub open: S,
+}
+
+impl<D, S> Step for Offscreen<D, S>
+where
+    D: IntoIterator<Item = EdgeDirection>,
+    S: IntoIterator<Item = StateId>,
+{
+    fn apply<R: rand::Rng>(self, mut rng: R, states: &States) -> Option<BoardSlice> {
+        let to = self
+            .from
+            .neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
+        if states.get_current(to).is_none() {
+            Set {
+                hex: self.from,
+                id: StateId::Air,
+            }
+            .apply(rng, states)
+        } else {
+            None
+        }
+    }
+}
+
 /// Convert other nearby cells into another state on collision.
 pub struct Infect<D, S>
 where
@@ -32,7 +64,7 @@ where
 {
     pub from: Hex,
     pub directions: D,
-    pub with_state: S,
+    pub open: S,
     pub into: StateId,
 }
 
@@ -45,7 +77,7 @@ where
         let to = self
             .from
             .neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
-        if states.is_state(to, self.with_state) {
+        if states.is_state(to, self.open) {
             Some(BoardSlice(vec![(to, self.into)]))
         } else {
             None
@@ -76,7 +108,7 @@ where
         let swap = RandomSwap {
             from: self.from,
             directions: self.directions,
-            with_state: self.open,
+            open: self.open,
         };
         let ((from, from_id), (to, to_id)) = swap.into_components(rng, states)?;
         let dir = to.main_direction_to(from);
@@ -122,7 +154,7 @@ where
 {
     pub from: Hex,
     pub directions: D,
-    pub with_state: S,
+    pub open: S,
 }
 
 impl<D, S> Step for RandomSwap<D, S>
@@ -149,7 +181,7 @@ where
         let to = self
             .from
             .neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
-        states.find_state(to, self.with_state).map(|other| {
+        states.find_state(to, self.open).map(|other| {
             (
                 (self.from, other),
                 (to, *states.get_current(self.from).unwrap()),

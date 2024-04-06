@@ -34,7 +34,7 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                with_state: [StateId::Water],
+                open: [StateId::Water],
                 into: StateId::Steam,
             },
         )
@@ -49,7 +49,7 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                with_state: [StateId::Air, StateId::Water, StateId::Sand],
+                open: [StateId::Air, StateId::Water, StateId::Sand],
             },
         )
     }

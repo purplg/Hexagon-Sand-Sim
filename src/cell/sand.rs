@@ -24,7 +24,7 @@ impl Tick for Sand {
                 EdgeDirection::POINTY_BOTTOM_LEFT,
                 EdgeDirection::POINTY_BOTTOM_RIGHT,
             ],
-            with_state: [Air, Water, Steam],
+            open: [Air, Wind, Water, Steam],
         }
         .apply(rng, &states)
     }

@@ -52,7 +52,7 @@ impl Tick for Water {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                with_state: [Air],
+                open: [Air],
             },
         )
         // Move laterally.
@@ -62,7 +62,7 @@ impl Tick for Water {
             RandomSwap {
                 from,
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                with_state: [Air],
+                open: [Air],
             },
         )
     }
