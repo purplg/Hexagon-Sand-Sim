@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::{EdgeDirection, Hex};
 use rand::rngs::SmallRng;
 
-use crate::grid::States;
+use crate::grid::BoardState;
 
 use super::{
     behavior::{Chance, Drag, RandomSwap, Set, Step},
@@ -26,12 +26,12 @@ impl HexColor for Water {
     };
 }
 impl Tick for Water {
-    fn tick(&self, from: Hex, states: &States, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, from: Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         // Evaporate
         Chance {
             step: Set {
                 hex: from,
-                id: StateId::Steam,
+                into: StateId::Steam,
             },
             chance: 0.0001,
         }
@@ -48,7 +48,7 @@ impl Tick for Water {
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
                 open: [Air, Self::ID],
-                drag: [Sand],
+                drag: Sand,
             },
         )
         // Move down
@@ -61,7 +61,7 @@ impl Tick for Water {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                open: [Air],
+                open: Air,
             },
         )
         // Move laterally.
@@ -71,7 +71,7 @@ impl Tick for Water {
             RandomSwap {
                 from,
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                open: [Air],
+                open: Air,
             },
         )
     }

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::{EdgeDirection, Hex};
 use rand::rngs::SmallRng;
 
-use crate::grid::States;
+use crate::grid::BoardState;
 
 use super::{
     behavior::{RandomSwap, Step},
@@ -27,7 +27,7 @@ impl HexColor for Sand {
 }
 
 impl Tick for Sand {
-    fn tick(&self, from: Hex, states: &States, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, from: Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         RandomSwap {
             from,
             directions: [

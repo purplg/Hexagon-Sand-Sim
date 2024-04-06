@@ -13,7 +13,7 @@ mod wind;
 pub use wind::Wind;
 mod behavior;
 
-use crate::grid::States;
+use crate::grid::BoardState;
 use bevy::prelude::*;
 use hexx::Hex;
 use rand::rngs::SmallRng;
@@ -58,7 +58,7 @@ impl CellRegistry {
 pub struct BoardSlice(Vec<(Hex, StateId)>);
 
 pub trait Tick {
-    fn tick(&self, _from: Hex, _states: &States, _rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, _from: Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice> {
         None
     }
 }

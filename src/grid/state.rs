@@ -10,7 +10,7 @@ pub struct EntityMap(HashMap<Hex, Entity>);
 
 /// The state of the board.
 #[derive(Resource, Default)]
-pub struct States {
+pub struct BoardState {
     /// The visible state of the board.
     pub current: HashMap<Hex, StateId>,
 
@@ -18,7 +18,7 @@ pub struct States {
     pub next: HashMap<Hex, StateId>,
 }
 
-impl States {
+impl BoardState {
     /// Get the [`StateId`] currently visible in a cell.
     pub fn get_current(&self, hex: impl Into<Hex>) -> Option<&StateId> {
         self.current.get(&hex.into())

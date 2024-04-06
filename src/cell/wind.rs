@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::{EdgeDirection, Hex};
 use rand::rngs::SmallRng;
 
-use crate::grid::States;
+use crate::grid::BoardState;
 
 use super::{
     behavior::{Chance, Drag, Infect, Offscreen, RandomSwap, Set, Step}, BoardSlice, HexColor, Register, StateId::{self, *}, Tick
@@ -24,12 +24,12 @@ impl HexColor for Wind {
 }
 
 impl Tick for Wind {
-    fn tick(&self, from: Hex, states: &States, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, from: Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         // Dissipate
         Chance {
             step: Set {
                 hex: from,
-                id: StateId::Air,
+                into: StateId::Air,
             },
             chance: 0.01,
         }
@@ -43,7 +43,7 @@ impl Tick for Wind {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_TOP_LEFT,
                 ],
-                open: [Air],
+                open: Air,
             },
         )
         .apply_or(

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::{EdgeDirection, Hex};
 use rand::rngs::SmallRng;
 
-use crate::grid::States;
+use crate::grid::BoardState;
 
 use super::{
     behavior::{Chance, Infect, RandomSwap, Set, Step},
@@ -25,11 +25,11 @@ impl HexColor for Fire {
 }
 
 impl Tick for Fire {
-    fn tick(&self, hex: Hex, states: &States, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
             step: Set {
                 hex,
-                id: StateId::Air,
+                into: StateId::Air,
             },
             chance: 0.005,
         }
@@ -44,7 +44,7 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [StateId::Water],
+                open: StateId::Water,
                 into: StateId::Steam,
             },
         )

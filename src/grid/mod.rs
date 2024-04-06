@@ -7,14 +7,9 @@ use std::{
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use rand::Rng;
-pub use state::{Board, States};
+pub use state::{Board, BoardState};
 
-use crate::{
-    cell::{Air, Fire, Sand, StateId, CellRegistry, Steam, Water, Wind},
-    input::Input,
-    rng::RngSource,
-    ui::Palette,
-};
+use crate::{cell::*, input::Input, rng::RngSource, ui::Palette};
 use bevy::{prelude::*, window::PrimaryWindow};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
@@ -32,7 +27,7 @@ impl bevy::prelude::Plugin for Plugin {
             },
             bounds: HexBounds::from_radius(64),
         });
-        app.init_resource::<States>();
+        app.init_resource::<BoardState>();
         app.insert_resource(TickRate::new(Duration::from_millis(50)));
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
@@ -82,7 +77,7 @@ impl SimState {
 struct TickEvent;
 
 /// Generate a fresh board.
-pub fn startup_system(board: Res<Board>, mut states: ResMut<States>, mut rng: ResMut<RngSource>) {
+pub fn startup_system(board: Res<Board>, mut states: ResMut<BoardState>, mut rng: ResMut<RngSource>) {
     states.current.clear();
     states.next.clear();
     for hex in board.bounds.all_coords() {
@@ -157,11 +152,7 @@ fn tick_system(
 }
 
 /// System to run the simulation every frame.
-fn sim_system(
-    mut states: ResMut<States>,
-    registry: Res<CellRegistry>,
-    mut rng: ResMut<RngSource>,
-) {
+fn sim_system(mut states: ResMut<BoardState>, registry: Res<CellRegistry>, mut rng: ResMut<RngSource>) {
     let slices = states
         .current
         .iter()
@@ -174,7 +165,7 @@ fn sim_system(
 }
 
 /// Move all the queued states into the current state.
-fn flush_system(mut states: ResMut<States>) {
+fn flush_system(mut states: ResMut<BoardState>) {
     states.tick();
 }
 
@@ -184,7 +175,7 @@ fn control_system(
     mut tick_event: EventWriter<TickEvent>,
     mut rate: ResMut<TickRate>,
     board: Res<Board>,
-    mut states: ResMut<States>,
+    mut states: ResMut<BoardState>,
     palette: Res<Palette>,
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
@@ -224,7 +215,7 @@ fn control_system(
 fn render_system(
     mut draw: Gizmos,
     board: Res<Board>,
-    states: Res<States>,
+    states: Res<BoardState>,
     registry: Res<CellRegistry>,
 ) {
     // HACK Why 0.7? I don't know but it lines up...

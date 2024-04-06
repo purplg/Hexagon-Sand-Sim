@@ -11,7 +11,7 @@ use bevy_inspector_egui::{
 
 use crate::{
     cell::StateId,
-    grid::{self, Board, SimState, States, TickRate},
+    grid::{self, Board, SimState, BoardState, TickRate},
 };
 
 pub(super) struct Plugin;
@@ -70,7 +70,7 @@ fn update_system(world: &mut World) {
                     world.run_system_once(grid::startup_system);
                 }
                 if ui.button("Clear").clicked() {
-                    let mut states = world.resource_mut::<States>();
+                    let mut states = world.resource_mut::<BoardState>();
                     states.current.clear();
                     states.next.clear();
                 }
@@ -104,7 +104,7 @@ pub struct Metrics {
     movement: usize,
 }
 
-fn metrics_system(states: Res<States>, mut metrics: ResMut<Metrics>) {
+fn metrics_system(states: Res<BoardState>, mut metrics: ResMut<Metrics>) {
     metrics.fire = 0;
     metrics.sand = 0;
     metrics.water = 0;

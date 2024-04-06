@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::{EdgeDirection, Hex};
 use rand::rngs::SmallRng;
 
-use crate::grid::States;
+use crate::grid::BoardState;
 
 use super::{
     behavior::{Chance, RandomSwap, Set, Step},
@@ -27,12 +27,12 @@ impl HexColor for Steam {
 }
 
 impl Tick for Steam {
-    fn tick(&self, from: Hex, states: &States, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, from: Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         // Condense
         Chance {
             step: Set {
                 hex: from,
-                id: StateId::Water,
+                into: StateId::Water,
             },
             chance: 0.0001,
         }

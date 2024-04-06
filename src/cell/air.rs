@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::Hex;
 use rand::rngs::SmallRng;
 
-use crate::grid::States;
+use crate::grid::BoardState;
 
 use super::{
     behavior::{Chance, Set, Step}, BoardSlice, HexColor, Register, StateId, Tick
@@ -19,11 +19,11 @@ impl HexColor for Air {
 }
 
 impl Tick for Air {
-    fn tick(&self, from: Hex, states: &States, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, from: Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
             step: Set {
                 hex: from,
-                id: StateId::Wind,
+                into: StateId::Wind,
             },
             chance: 0.0001,
         }
