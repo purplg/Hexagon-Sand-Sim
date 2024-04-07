@@ -32,7 +32,7 @@ impl IntoIterator for StateId {
 pub trait Step {
     /// Try to generate a [`BoardSlice`] or return `None` if not
     /// applicable.
-    fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, states: &BoardState) -> Option<BoardSlice>;
+    fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, _states: &BoardState) -> Option<BoardSlice>;
 }
 
 impl Step for Option<BoardSlice> {
