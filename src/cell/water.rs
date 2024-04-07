@@ -26,21 +26,18 @@ impl HexColor for Water {
     };
 }
 impl Tick for Water {
-    fn tick(&self, from: Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         // Evaporate
         Chance {
-            step: Set {
-                hex: from,
-                into: StateId::Steam,
-            },
+            step: Set::new(StateId::Steam),
             chance: 0.0001,
         }
         // Drag sand
         .apply_or(
+            hex,
             &mut rng,
             states,
             Drag {
-                from,
                 directions: [
                     EdgeDirection::POINTY_LEFT,
                     EdgeDirection::POINTY_RIGHT,
@@ -53,10 +50,10 @@ impl Tick for Water {
         )
         // Move down
         .apply_or(
+            hex,
             &mut rng,
             states,
             RandomSwap {
-                from,
                 directions: [
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
@@ -66,10 +63,10 @@ impl Tick for Water {
         )
         // Move laterally.
         .apply_or(
+            hex,
             &mut rng,
             states,
             RandomSwap {
-                from,
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
                 open: Air,
             },

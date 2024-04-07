@@ -152,12 +152,16 @@ fn tick_system(
 }
 
 /// System to run the simulation every frame.
-fn sim_system(mut states: ResMut<BoardState>, registry: Res<CellRegistry>, mut rng: ResMut<RngSource>) {
+fn sim_system(
+    mut states: ResMut<BoardState>,
+    registry: Res<CellRegistry>,
+    mut rng: ResMut<RngSource>,
+) {
     let slices = states
         .current
         .iter()
         .filter_map(|(hex, id)| registry.get(id).map(|tickable| (hex, tickable)))
-        .filter_map(|(hex, tickable)| tickable.tick(*hex, &states, &mut rng))
+        .filter_map(|(hex, tickable)| tickable.tick(hex, &states, &mut rng))
         .collect::<Vec<_>>();
     for slice in slices {
         states.apply(slice);

@@ -27,15 +27,14 @@ impl HexColor for Sand {
 }
 
 impl Tick for Sand {
-    fn tick(&self, from: Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         RandomSwap {
-            from,
             directions: [
                 EdgeDirection::POINTY_BOTTOM_LEFT,
                 EdgeDirection::POINTY_BOTTOM_RIGHT,
             ],
             open: [Air, Wind, Water, Steam],
         }
-        .apply(rng, &states)
+        .apply(hex, rng, &states)
     }
 }

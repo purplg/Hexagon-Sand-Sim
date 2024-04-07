@@ -25,19 +25,16 @@ impl HexColor for Fire {
 }
 
 impl Tick for Fire {
-    fn tick(&self, hex: Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
-            step: Set {
-                hex,
-                into: StateId::Air,
-            },
+            step: Set::new(StateId::Air),
             chance: 0.005,
         }
         .apply_or(
+            hex,
             &mut rng,
             states,
             Infect {
-                from: hex,
                 directions: [
                     EdgeDirection::POINTY_LEFT,
                     EdgeDirection::POINTY_RIGHT,
@@ -49,10 +46,10 @@ impl Tick for Fire {
             },
         )
         .apply_or(
+            hex,
             &mut rng,
             states,
             RandomSwap {
-                from: hex,
                 directions: [
                     EdgeDirection::POINTY_LEFT,
                     EdgeDirection::POINTY_RIGHT,

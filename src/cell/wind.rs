@@ -5,7 +5,10 @@ use rand::rngs::SmallRng;
 use crate::grid::BoardState;
 
 use super::{
-    behavior::{Chance, Drag, Infect, Offscreen, RandomSwap, Set, Step}, BoardSlice, HexColor, Register, StateId::{self, *}, Tick
+    behavior::{Chance, Drag, Infect, Offscreen, RandomSwap, Set, Step},
+    BoardSlice, HexColor, Register,
+    StateId::{self, *},
+    Tick,
 };
 
 pub struct Wind;
@@ -16,28 +19,25 @@ impl Register for Wind {
 
 impl HexColor for Wind {
     const COLOR: Color = Color::Rgba {
-                red: 1.0,
-                green: 1.0,
-                blue: 1.0,
-                alpha: 0.2,
-            };
+        red: 1.0,
+        green: 1.0,
+        blue: 1.0,
+        alpha: 0.2,
+    };
 }
 
 impl Tick for Wind {
-    fn tick(&self, from: Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         // Dissipate
         Chance {
-            step: Set {
-                hex: from,
-                into: StateId::Air,
-            },
+            step: Set::new(StateId::Air),
             chance: 0.01,
         }
         .apply_or(
+            hex,
             &mut rng,
             states,
             Offscreen {
-                from,
                 directions: [
                     EdgeDirection::POINTY_LEFT,
                     EdgeDirection::POINTY_BOTTOM_LEFT,
@@ -47,10 +47,10 @@ impl Tick for Wind {
             },
         )
         .apply_or(
+            hex,
             &mut rng,
             states,
             Drag {
-                from,
                 directions: [
                     EdgeDirection::POINTY_LEFT,
                     EdgeDirection::POINTY_BOTTOM_LEFT,
@@ -61,11 +61,11 @@ impl Tick for Wind {
             },
         )
         .apply_or(
+            hex,
             &mut rng,
             states,
             Chance {
                 step: Infect {
-                    from,
                     directions: [
                         EdgeDirection::POINTY_LEFT,
                         EdgeDirection::POINTY_BOTTOM_LEFT,
@@ -78,10 +78,10 @@ impl Tick for Wind {
             },
         )
         .apply_or(
+            hex,
             &mut rng,
             states,
             RandomSwap {
-                from,
                 directions: [
                     EdgeDirection::POINTY_LEFT,
                     EdgeDirection::POINTY_BOTTOM_LEFT,

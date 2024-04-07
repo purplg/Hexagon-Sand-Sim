@@ -11,6 +11,8 @@ mod steam;
 pub use steam::Steam;
 mod wind;
 pub use wind::Wind;
+mod tree;
+pub use tree::*;
 mod behavior;
 
 use crate::grid::BoardState;
@@ -26,6 +28,13 @@ pub enum StateId {
     Water,
     Steam,
     Wind,
+    Seed,
+    Trunk,
+    BranchLeft,
+    BranchRight,
+    Twig,
+    Leaf,
+    Sapling,
 }
 
 #[derive(Resource, Default)]
@@ -39,6 +48,12 @@ impl CellRegistry {
     where
         T: Register + HexColor + Tick + Send + Sync + 'static,
     {
+        if self.inner.contains_key(&T::ID) {
+            panic!("StateId::{:?} already exists in Tick registry.", T::ID);
+        }
+        if self.color.contains_key(&T::ID) {
+            panic!("StateId::{:?} already exists in Color registry.", T::ID);
+        }
         self.inner.insert(T::ID, Box::new(tickable));
         self.color.insert(T::ID, T::COLOR);
     }
@@ -50,7 +65,7 @@ impl CellRegistry {
     pub fn color(&self, id: &StateId) -> &Color {
         self.color
             .get(id)
-            .expect(format!("StateID {:?} missing from Color registry", id).as_str())
+            .unwrap_or_else(|| panic!("StateID {:?} missing from Color registry", id))
     }
 }
 
@@ -58,7 +73,7 @@ impl CellRegistry {
 pub struct BoardSlice(Vec<(Hex, StateId)>);
 
 pub trait Tick {
-    fn tick(&self, _from: Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, _from: &Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice> {
         None
     }
 }
