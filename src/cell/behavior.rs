@@ -5,7 +5,7 @@ use rand::seq::IteratorRandom;
 
 use crate::grid::BoardState;
 
-use super::{BoardSlice, StateId};
+use super::{Air, BoardSlice, Register as _, StateId};
 
 pub trait States: IntoIterator<Item = StateId> {}
 
@@ -57,6 +57,14 @@ impl Step for Option<BoardSlice> {
     }
 }
 
+pub struct Noop;
+
+impl Step for Noop {
+    fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, _states: &BoardState) -> Option<BoardSlice> {
+        None
+    }
+}
+
 /// Fall off the screen.
 pub struct Offscreen<D: Directions, S: States> {
     pub directions: D,
@@ -67,7 +75,7 @@ impl<D: Directions, S: States> Step for Offscreen<D, S> {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         let to = hex.neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
         if states.get_current(to).is_none() {
-            Set::new(StateId::Air).apply(hex, rng, states)
+            Set(Air::ID).apply(hex, rng, states)
         } else {
             None
         }
@@ -165,26 +173,65 @@ impl<A: Step, B: Step> Choose<A, B> {
     }
 }
 
-/// Conditionally apply a step.
-pub struct When<S, P>
+/// Conditionally apply `on_true` when predicate returns `true`,
+/// otherwise apply `on_false`.
+pub struct If<P, T, F>(pub P, pub T, pub F)
 where
-    S: Step,
-    P: FnOnce(Hex, &BoardState) -> bool,
-{
-    pub predicate: P,
-    pub step: S,
-}
+    P: FnOnce() -> bool,
+    T: Step,
+    F: Step;
 
-impl<S, P> Step for When<S, P>
+impl<P, T, F> Step for If<P, T, F>
 where
-    S: Step,
-    P: FnOnce(Hex, &BoardState) -> bool,
+    P: FnOnce() -> bool,
+    T: Step,
+    F: Step,
 {
     fn apply<R: rand::Rng>(self, hex: &Hex, _rng: R, states: &BoardState) -> Option<BoardSlice> {
-        if (self.predicate)(*hex, states) {
-            self.step.apply(hex, _rng, states)
+        if (self.0)() {
+            self.1.apply(hex, _rng, states)
+        } else {
+            self.2.apply(hex, _rng, states)
+        }
+    }
+}
+
+/// Conditionally apply `on_true` when predicate returns `true`.
+pub struct When<P, T>(pub P, pub T)
+where
+    P: FnOnce() -> bool,
+    T: Step;
+
+impl<P, T> Step for When<P, T>
+where
+    P: FnOnce() -> bool,
+    T: Step,
+{
+    fn apply<R: rand::Rng>(self, hex: &Hex, _rng: R, states: &BoardState) -> Option<BoardSlice> {
+        if (self.0)() {
+            self.1.apply(hex, _rng, states)
         } else {
             None
+        }
+    }
+}
+
+/// Conditionally apply `on_false` when predicate returns `false`.
+pub struct Unless<P, F>(pub P, pub F)
+where
+    P: FnOnce() -> bool,
+    F: Step;
+
+impl<P, F> Step for Unless<P, F>
+where
+    P: FnOnce() -> bool,
+    F: Step,
+{
+    fn apply<R: rand::Rng>(self, hex: &Hex, _rng: R, states: &BoardState) -> Option<BoardSlice> {
+        if (self.0)() {
+            None
+        } else {
+            self.1.apply(hex, _rng, states)
         }
     }
 }
@@ -322,9 +369,7 @@ impl Step for Swap {
 }
 
 /// Set the state of a cell
-pub struct Set<I: States> {
-    pub into: I,
-}
+pub struct Set<I: States>(pub I);
 
 impl<I: States> Step for Set<I> {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
@@ -333,14 +378,8 @@ impl<I: States> Step for Set<I> {
         } else {
             Some(BoardSlice(vec![(
                 *hex,
-                self.into.into_iter().choose(&mut rng).unwrap(),
+                self.0.into_iter().choose(&mut rng).unwrap(),
             )]))
         }
-    }
-}
-
-impl<I: States> Set<I> {
-    pub fn new(into: I) -> Self {
-        Self { into }
     }
 }

@@ -1,21 +1,9 @@
 use bevy::prelude::*;
-use hexx::{EdgeDirection, Hex};
-use rand::rngs::SmallRng;
+use hexx::EdgeDirection;
 
-use crate::grid::BoardState;
-
-use super::{
-    behavior::{Chance, RandomSwap, Set, Step},
-    BoardSlice, HexColor, Register,
-    StateId::{self, *},
-    Tick,
-};
+use super::{behavior::*, *};
 
 pub struct Steam;
-
-impl Register for Steam {
-    const ID: StateId = StateId::Steam;
-}
 
 impl HexColor for Steam {
     const COLOR: Color = Color::Rgba {
@@ -30,7 +18,7 @@ impl Tick for Steam {
     fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         // Condense
         Chance {
-            step: Set::new(StateId::Water),
+            step: Set(Water::ID),
             chance: 0.0001,
         }
         // Move up
@@ -43,7 +31,7 @@ impl Tick for Steam {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [Air, Water],
+                open: [Air::ID, Water::ID],
             },
         )
         // Move laterally.
@@ -53,7 +41,7 @@ impl Tick for Steam {
             states,
             RandomSwap {
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                open: [Air, Water, Fire],
+                open: [Air::ID, Water::ID, Fire::ID],
             },
         )
     }

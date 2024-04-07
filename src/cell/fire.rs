@@ -1,19 +1,9 @@
 use bevy::prelude::*;
-use hexx::{EdgeDirection, Hex};
-use rand::rngs::SmallRng;
+use hexx::EdgeDirection;
 
-use crate::grid::BoardState;
-
-use super::{
-    behavior::{Chance, Infect, RandomSwap, Set, Step},
-    BoardSlice, HexColor, Register, StateId, Tick,
-};
+use super::{behavior::*, *};
 
 pub struct Fire;
-
-impl Register for Fire {
-    const ID: StateId = StateId::Fire;
-}
 
 impl HexColor for Fire {
     const COLOR: Color = Color::Rgba {
@@ -27,7 +17,7 @@ impl HexColor for Fire {
 impl Tick for Fire {
     fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
-            step: Set::new(StateId::Air),
+            step: Set(Air::ID),
             chance: 0.005,
         }
         .apply_or(
@@ -41,8 +31,8 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: StateId::Water,
-                into: StateId::Steam,
+                open: Water::ID,
+                into: Steam::ID,
             },
         )
         .apply_or(
@@ -56,7 +46,7 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [StateId::Air, StateId::Water, StateId::Sand],
+                open: [Air::ID, Water::ID, Sand::ID],
             },
         )
     }

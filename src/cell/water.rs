@@ -1,21 +1,9 @@
 use bevy::prelude::*;
-use hexx::{EdgeDirection, Hex};
-use rand::rngs::SmallRng;
+use hexx::EdgeDirection;
 
-use crate::grid::BoardState;
-
-use super::{
-    behavior::{Chance, Drag, Or4, RandomSwap, Set, Step},
-    BoardSlice, HexColor, Register,
-    StateId::{self, *},
-    Tick,
-};
+use super::{behavior::*, *};
 
 pub struct Water;
-
-impl Register for Water {
-    const ID: StateId = StateId::Water;
-}
 
 impl HexColor for Water {
     const COLOR: Color = Color::Rgba {
@@ -30,7 +18,7 @@ impl Tick for Water {
         Or4(
             // Evaporate
             Chance {
-                step: Set::new(StateId::Steam),
+                step: Set(Steam::ID),
                 chance: 0.0001,
             },
             // Drag sand
@@ -41,8 +29,8 @@ impl Tick for Water {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                open: [Air, Self::ID],
-                drag: Sand,
+                open: [Air::ID, Self::ID],
+                drag: Sand::ID,
             },
             // Move down
             RandomSwap {
@@ -50,12 +38,12 @@ impl Tick for Water {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                open: Air,
+                open: Air::ID,
             },
             // Move laterally.
             RandomSwap {
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                open: Air,
+                open: Air::ID,
             },
         )
         .apply(hex, &mut rng, states)

@@ -1,3 +1,5 @@
+#![feature(const_type_name)]
+
 mod camera;
 mod cell;
 mod grid;

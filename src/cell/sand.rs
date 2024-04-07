@@ -1,21 +1,9 @@
 use bevy::prelude::*;
-use hexx::{EdgeDirection, Hex};
-use rand::rngs::SmallRng;
+use hexx::EdgeDirection;
 
-use crate::grid::BoardState;
-
-use super::{
-    behavior::{RandomSwap, Step},
-    BoardSlice, HexColor, Register,
-    StateId::{self, *},
-    Tick,
-};
+use super::{behavior::*, *};
 
 pub struct Sand;
-
-impl Register for Sand {
-    const ID: StateId = StateId::Sand;
-}
 
 impl HexColor for Sand {
     const COLOR: Color = Color::Rgba {
@@ -33,7 +21,7 @@ impl Tick for Sand {
                 EdgeDirection::POINTY_BOTTOM_LEFT,
                 EdgeDirection::POINTY_BOTTOM_RIGHT,
             ],
-            open: [Air, Wind, Water, Steam],
+            open: [Air::ID, Wind::ID, Water::ID, Steam::ID],
         }
         .apply(hex, rng, &states)
     }

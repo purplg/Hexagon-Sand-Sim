@@ -1,4 +1,6 @@
 mod air;
+use std::any::type_name;
+
 pub use air::Air;
 mod fire;
 use bevy::utils::HashMap;
@@ -21,20 +23,12 @@ use hexx::Hex;
 use rand::rngs::SmallRng;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum StateId {
-    Air,
-    Fire,
-    Sand,
-    Water,
-    Steam,
-    Wind,
-    Seed,
-    Trunk,
-    BranchLeft,
-    BranchRight,
-    Twig,
-    Leaf,
-    Sapling,
+pub struct StateId(pub &'static str);
+
+impl From<&'static str> for StateId {
+    fn from(value: &'static str) -> Self {
+        Self(value)
+    }
 }
 
 #[derive(Resource, Default)]
@@ -46,16 +40,24 @@ pub struct CellRegistry {
 impl CellRegistry {
     pub fn add<T>(&mut self, tickable: T)
     where
-        T: Register + HexColor + Tick + Send + Sync + 'static,
+        T: HexColor + Tick + Send + Sync + 'static,
     {
-        if self.inner.contains_key(&T::ID) {
-            panic!("StateId::{:?} already exists in Tick registry.", T::ID);
+        self.add_with_color(tickable, T::COLOR)
+    }
+
+    pub fn add_with_color<T>(&mut self, tickable: T, color: Color)
+    where
+        T: Tick + Send + Sync + 'static,
+    {
+        let id: StateId = type_name::<T>().into();
+        if self.inner.contains_key(&id) {
+            panic!("StateId::{:?} already exists in Tick registry.", id);
         }
-        if self.color.contains_key(&T::ID) {
-            panic!("StateId::{:?} already exists in Color registry.", T::ID);
+        if self.color.contains_key(&id) {
+            panic!("StateId::{:?} already exists in Color registry.", id);
         }
-        self.inner.insert(T::ID, Box::new(tickable));
-        self.color.insert(T::ID, T::COLOR);
+        self.inner.insert(id, Box::new(tickable));
+        self.color.insert(id, color);
     }
 
     pub fn get(&self, id: &StateId) -> Option<&Box<dyn Tick + Send + Sync>> {
@@ -86,6 +88,13 @@ impl From<StateId> for Vec<StateId> {
 
 pub trait Register {
     const ID: StateId;
+}
+
+impl<T> Register for T
+where
+    T: Tick,
+{
+    const ID: StateId = StateId(type_name::<T>());
 }
 
 pub trait HexColor {

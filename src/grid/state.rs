@@ -43,8 +43,7 @@ impl BoardState {
         state: impl IntoIterator<Item = StateId>,
     ) -> Option<StateId> {
         self.get_current(hex)
-            .map(|id| state.into_iter().find(|other_id| id == other_id))
-            .flatten()
+            .and_then(|id| state.into_iter().find(|other_id| id == other_id))
     }
 
     /// Set the future state of a cell.

@@ -10,8 +10,8 @@ use bevy_inspector_egui::{
 };
 
 use crate::{
-    cell::StateId,
-    grid::{self, Board, SimState, BoardState, TickRate},
+    cell::*,
+    grid::{self, Board, BoardState, SimState, TickRate},
 };
 
 pub(super) struct Plugin;
@@ -82,12 +82,12 @@ fn update_system(world: &mut World) {
         ui.horizontal(|ui| {
             let mut palette = world.resource_mut::<Palette>();
             ui.add(egui::Slider::new(&mut palette.brush_size, 0..=10));
-            ui.radio_value(&mut palette.selected, StateId::Air, "Air");
-            ui.radio_value(&mut palette.selected, StateId::Fire, "Fire");
-            ui.radio_value(&mut palette.selected, StateId::Sand, "Sand");
-            ui.radio_value(&mut palette.selected, StateId::Water, "Water");
-            ui.radio_value(&mut palette.selected, StateId::Steam, "Steam");
-            ui.radio_value(&mut palette.selected, StateId::Wind, "Wind");
+            ui.radio_value(&mut palette.selected, Air::ID, "Air");
+            ui.radio_value(&mut palette.selected, Fire::ID, "Fire");
+            ui.radio_value(&mut palette.selected, Sand::ID, "Sand");
+            ui.radio_value(&mut palette.selected, Water::ID, "Water");
+            ui.radio_value(&mut palette.selected, Steam::ID, "Steam");
+            ui.radio_value(&mut palette.selected, Wind::ID, "Wind");
         });
     });
 }
@@ -112,13 +112,13 @@ fn metrics_system(states: Res<BoardState>, mut metrics: ResMut<Metrics>) {
     metrics.wind = 0;
     metrics.movement = 0;
     for state in states.current.values() {
-        match state {
-            StateId::Fire => metrics.fire += 1,
-            StateId::Sand => metrics.sand += 1,
-            StateId::Water => metrics.water += 1,
-            StateId::Steam => metrics.steam += 1,
-            StateId::Wind => metrics.wind += 1,
-            StateId::Air => {}
+        match *state {
+            Fire::ID => metrics.fire += 1,
+            Sand::ID => metrics.sand += 1,
+            Water::ID => metrics.water += 1,
+            Steam::ID => metrics.steam += 1,
+            Wind::ID => metrics.wind += 1,
+            _ => {}
         }
     }
     metrics.total = metrics.fire + metrics.sand + metrics.water + metrics.steam;
@@ -148,8 +148,8 @@ impl DerefMut for Palette {
 impl Default for Palette {
     fn default() -> Self {
         Self {
-            selected: StateId::Air,
-            brush_size: 2,
+            selected: Air::ID,
+            brush_size: 1,
         }
     }
 }

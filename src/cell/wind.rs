@@ -1,28 +1,16 @@
 use bevy::prelude::*;
-use hexx::{EdgeDirection, Hex};
-use rand::rngs::SmallRng;
+use hexx::EdgeDirection;
 
-use crate::grid::BoardState;
-
-use super::{
-    behavior::{Chance, Drag, Infect, Offscreen, Or5, RandomSwap, Set, Step},
-    BoardSlice, HexColor, Register,
-    StateId::{self, *},
-    Tick,
-};
+use super::{behavior::*, *};
 
 pub struct Wind;
-
-impl Register for Wind {
-    const ID: StateId = StateId::Wind;
-}
 
 impl HexColor for Wind {
     const COLOR: Color = Color::Rgba {
         red: 1.0,
         green: 1.0,
         blue: 1.0,
-        alpha: 0.2,
+        alpha: 0.01,
     };
 }
 
@@ -31,7 +19,7 @@ impl Tick for Wind {
         Or5(
             // Dissipate
             Chance {
-                step: Set::new(StateId::Air),
+                step: Set(Air::ID),
                 chance: 0.01,
             },
             Offscreen {
@@ -40,7 +28,7 @@ impl Tick for Wind {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_TOP_LEFT,
                 ],
-                open: Air,
+                open: Air::ID,
             },
             Drag {
                 directions: [
@@ -48,8 +36,8 @@ impl Tick for Wind {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_TOP_LEFT,
                 ],
-                open: [Air, Self::ID],
-                drag: [Water, Fire, Sand],
+                open: [Air::ID, Self::ID],
+                drag: [Water::ID, Fire::ID, Sand::ID],
             },
             Chance {
                 step: Infect {
@@ -58,7 +46,7 @@ impl Tick for Wind {
                         EdgeDirection::POINTY_BOTTOM_LEFT,
                         EdgeDirection::POINTY_TOP_LEFT,
                     ],
-                    open: [Air, Self::ID],
+                    open: [Air::ID, Self::ID],
                     into: Self::ID,
                 },
                 chance: 0.01,
@@ -69,7 +57,7 @@ impl Tick for Wind {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_TOP_LEFT,
                 ],
-                open: [Air, Self::ID],
+                open: [Air::ID, Self::ID],
             },
         )
         .apply(hex, &mut rng, states)

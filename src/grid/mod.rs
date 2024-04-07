@@ -83,13 +83,13 @@ pub fn startup_system(board: Res<Board>, mut states: ResMut<BoardState>, mut rng
     for hex in board.bounds.all_coords() {
         let chance: f32 = rng.gen();
         let state_id = if chance < 0.25 {
-            StateId::Sand
+            Sand::ID
         } else if chance < 0.50 {
-            StateId::Fire
+            Fire::ID
         } else if chance < 0.75 {
-            StateId::Water
+            Water::ID
         } else {
-            StateId::Air
+            Air::ID
         };
         states.set(hex, state_id);
     }
