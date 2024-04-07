@@ -78,7 +78,7 @@ fn update_system(world: &mut World) {
         });
     });
 
-    egui::TopBottomPanel::bottom("pallete").show(egui_ctx.get_mut(), |ui| {
+    egui::TopBottomPanel::bottom("palette").show(egui_ctx.get_mut(), |ui| {
         ui.horizontal(|ui| {
             let mut palette = world.resource_mut::<Palette>();
             ui.add(egui::Slider::new(&mut palette.brush_size, 0..=10));
