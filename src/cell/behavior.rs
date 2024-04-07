@@ -33,22 +33,6 @@ pub trait Step {
     /// Try to generate a [`BoardSlice`] or return `None` if not
     /// applicable.
     fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, states: &BoardState) -> Option<BoardSlice>;
-
-    /// If this [`Self::apply`] fails (provides None), then try to apply a
-    /// differnt `Step`.
-    fn apply_or<R: rand::Rng>(
-        self,
-        hex: &Hex,
-        mut rng: R,
-        states: &BoardState,
-        s: impl Step,
-    ) -> Option<BoardSlice>
-    where
-        Self: Sized,
-    {
-        self.apply(hex, &mut rng, states)
-            .or_else(|| s.apply(hex, &mut rng, states))
-    }
 }
 
 impl Step for Option<BoardSlice> {
@@ -244,8 +228,10 @@ where
     A: Step,
     B: Step,
 {
-    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
-        self.0.apply_or(hex, rng, states, self.1)
+    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0
+            .apply(hex, &mut rng, states)
+            .or_else(|| self.1.apply(hex, &mut rng, states))
     }
 }
 
@@ -263,8 +249,9 @@ where
 {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
-            .apply_or(hex, &mut rng, states, self.1)
-            .apply_or(hex, &mut rng, states, self.2)
+            .apply(hex, &mut rng, states)
+            .or_else(|| self.1.apply(hex, &mut rng, states))
+            .or_else(|| self.2.apply(hex, &mut rng, states))
     }
 }
 
@@ -284,9 +271,10 @@ where
 {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
-            .apply_or(hex, &mut rng, states, self.1)
-            .apply_or(hex, &mut rng, states, self.2)
-            .apply_or(hex, &mut rng, states, self.3)
+            .apply(hex, &mut rng, states)
+            .or_else(|| self.1.apply(hex, &mut rng, states))
+            .or_else(|| self.2.apply(hex, &mut rng, states))
+            .or_else(|| self.3.apply(hex, &mut rng, states))
     }
 }
 
@@ -308,10 +296,11 @@ where
 {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
-            .apply_or(hex, &mut rng, states, self.1)
-            .apply_or(hex, &mut rng, states, self.2)
-            .apply_or(hex, &mut rng, states, self.3)
-            .apply_or(hex, &mut rng, states, self.4)
+            .apply(hex, &mut rng, states)
+            .or_else(|| self.1.apply(hex, &mut rng, states))
+            .or_else(|| self.2.apply(hex, &mut rng, states))
+            .or_else(|| self.3.apply(hex, &mut rng, states))
+            .or_else(|| self.4.apply(hex, &mut rng, states))
     }
 }
 

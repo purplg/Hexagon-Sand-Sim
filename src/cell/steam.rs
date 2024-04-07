@@ -15,17 +15,14 @@ impl HexColor for Steam {
 }
 
 impl Tick for Steam {
-    fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
-        // Condense
-        Chance {
-            step: Set(Water::ID),
-            chance: 0.0001,
-        }
-        // Move up
-        .apply_or(
-            hex,
-            &mut rng,
-            states,
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+        Or3(
+            // Condense
+            Chance {
+                step: Set(Water::ID),
+                chance: 0.0001,
+            },
+            // Move up
             RandomSwap {
                 directions: [
                     EdgeDirection::POINTY_TOP_LEFT,
@@ -33,16 +30,12 @@ impl Tick for Steam {
                 ],
                 open: [Air::ID, Water::ID],
             },
-        )
-        // Move laterally.
-        .apply_or(
-            hex,
-            &mut rng,
-            states,
+            // Move laterally.
             RandomSwap {
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
                 open: [Air::ID, Water::ID, Fire::ID],
             },
         )
+        .apply(hex, rng, states)
     }
 }
