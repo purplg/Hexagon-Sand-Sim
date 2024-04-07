@@ -77,7 +77,11 @@ impl SimState {
 struct TickEvent;
 
 /// Generate a fresh board.
-pub fn startup_system(board: Res<Board>, mut states: ResMut<BoardState>, mut rng: ResMut<RngSource>) {
+pub fn startup_system(
+    board: Res<Board>,
+    mut states: ResMut<BoardState>,
+    mut rng: ResMut<RngSource>,
+) {
     states.current.clear();
     states.next.clear();
     for hex in board.bounds.all_coords() {
@@ -174,6 +178,7 @@ fn flush_system(mut states: ResMut<BoardState>) {
 }
 
 /// System to enable user control over the simulation.
+#[allow(clippy::too_many_arguments)]
 fn control_system(
     query: Query<&ActionState<Input>>,
     mut tick_event: EventWriter<TickEvent>,

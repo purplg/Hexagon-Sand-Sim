@@ -60,8 +60,8 @@ impl CellRegistry {
         self.color.insert(id, color);
     }
 
-    pub fn get(&self, id: &StateId) -> Option<&Box<dyn Tick + Send + Sync>> {
-        self.inner.get(id)
+    pub fn get(&self, id: &StateId) -> Option<&(dyn Tick + Send + Sync)> {
+        self.inner.get(id).map(|a| &**a)
     }
 
     pub fn color(&self, id: &StateId) -> &Color {

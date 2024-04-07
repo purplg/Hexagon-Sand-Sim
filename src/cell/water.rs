@@ -14,7 +14,7 @@ impl HexColor for Water {
     };
 }
 impl Tick for Water {
-    fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         Or4(
             // Evaporate
             Chance {
@@ -46,6 +46,6 @@ impl Tick for Water {
                 open: Air::ID,
             },
         )
-        .apply(hex, &mut rng, states)
+        .apply(hex, rng, states)
     }
 }

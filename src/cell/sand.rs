@@ -23,6 +23,6 @@ impl Tick for Sand {
             ],
             open: [Air::ID, Wind::ID, Water::ID, Steam::ID],
         }
-        .apply(hex, rng, &states)
+        .apply(hex, rng, states)
     }
 }

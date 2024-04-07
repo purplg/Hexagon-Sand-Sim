@@ -15,21 +15,18 @@ impl HexColor for Wind {
 }
 
 impl Tick for Wind {
-    fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         Or5(
             // Dissipate
             Chance {
                 step: Set(Air::ID),
                 chance: 0.01,
             },
-            Offscreen {
-                directions: [
-                    EdgeDirection::POINTY_LEFT,
-                    EdgeDirection::POINTY_BOTTOM_LEFT,
-                    EdgeDirection::POINTY_TOP_LEFT,
-                ],
-                open: Air::ID,
-            },
+            Offscreen([
+                EdgeDirection::POINTY_LEFT,
+                EdgeDirection::POINTY_BOTTOM_LEFT,
+                EdgeDirection::POINTY_TOP_LEFT,
+            ]),
             Drag {
                 directions: [
                     EdgeDirection::POINTY_LEFT,
@@ -60,6 +57,6 @@ impl Tick for Wind {
                 open: [Air::ID, Self::ID],
             },
         )
-        .apply(hex, &mut rng, states)
+        .apply(hex, rng, states)
     }
 }

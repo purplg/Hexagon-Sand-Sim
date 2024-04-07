@@ -66,14 +66,11 @@ impl Step for Noop {
 }
 
 /// Fall off the screen.
-pub struct Offscreen<D: Directions, S: States> {
-    pub directions: D,
-    pub open: S,
-}
+pub struct Offscreen<D: Directions>(pub D);
 
-impl<D: Directions, S: States> Step for Offscreen<D, S> {
+impl<D: Directions> Step for Offscreen<D> {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
-        let to = hex.neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
+        let to = hex.neighbor(self.0.into_iter().choose(&mut rng).unwrap());
         if states.get_current(to).is_none() {
             Set(Air::ID).apply(hex, rng, states)
         } else {
