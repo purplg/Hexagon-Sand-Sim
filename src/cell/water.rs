@@ -5,7 +5,7 @@ use rand::rngs::SmallRng;
 use crate::grid::BoardState;
 
 use super::{
-    behavior::{Chance, Drag, RandomSwap, Set, Step},
+    behavior::{Chance, Drag, Or4, RandomSwap, Set, Step},
     BoardSlice, HexColor, Register,
     StateId::{self, *},
     Tick,
@@ -27,16 +27,13 @@ impl HexColor for Water {
 }
 impl Tick for Water {
     fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
-        // Evaporate
-        Chance {
-            step: Set::new(StateId::Steam),
-            chance: 0.0001,
-        }
-        // Drag sand
-        .apply_or(
-            hex,
-            &mut rng,
-            states,
+        Or4(
+            // Evaporate
+            Chance {
+                step: Set::new(StateId::Steam),
+                chance: 0.0001,
+            },
+            // Drag sand
             Drag {
                 directions: [
                     EdgeDirection::POINTY_LEFT,
@@ -47,12 +44,7 @@ impl Tick for Water {
                 open: [Air, Self::ID],
                 drag: Sand,
             },
-        )
-        // Move down
-        .apply_or(
-            hex,
-            &mut rng,
-            states,
+            // Move down
             RandomSwap {
                 directions: [
                     EdgeDirection::POINTY_BOTTOM_LEFT,
@@ -60,16 +52,12 @@ impl Tick for Water {
                 ],
                 open: Air,
             },
-        )
-        // Move laterally.
-        .apply_or(
-            hex,
-            &mut rng,
-            states,
+            // Move laterally.
             RandomSwap {
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
                 open: Air,
             },
         )
+        .apply(hex, &mut rng, states)
     }
 }

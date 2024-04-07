@@ -205,6 +205,72 @@ where
     }
 }
 
+pub struct Or3<A, B, C>(pub A, pub B, pub C)
+where
+    A: Step,
+    B: Step,
+    C: Step;
+
+impl<A, B, C> Step for Or3<A, B, C>
+where
+    A: Step,
+    B: Step,
+    C: Step,
+{
+    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0
+            .apply_or(hex, &mut rng, states, self.1)
+            .apply_or(hex, &mut rng, states, self.2)
+    }
+}
+
+pub struct Or4<A, B, C, D>(pub A, pub B, pub C, pub D)
+where
+    A: Step,
+    B: Step,
+    C: Step,
+    D: Step;
+
+impl<A, B, C, D> Step for Or4<A, B, C, D>
+where
+    A: Step,
+    B: Step,
+    C: Step,
+    D: Step,
+{
+    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0
+            .apply_or(hex, &mut rng, states, self.1)
+            .apply_or(hex, &mut rng, states, self.2)
+            .apply_or(hex, &mut rng, states, self.3)
+    }
+}
+
+pub struct Or5<A, B, C, D, E>(pub A, pub B, pub C, pub D, pub E)
+where
+    A: Step,
+    B: Step,
+    C: Step,
+    D: Step,
+    E: Step;
+
+impl<A, B, C, D, E> Step for Or5<A, B, C, D, E>
+where
+    A: Step,
+    B: Step,
+    C: Step,
+    D: Step,
+    E: Step,
+{
+    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0
+            .apply_or(hex, &mut rng, states, self.1)
+            .apply_or(hex, &mut rng, states, self.2)
+            .apply_or(hex, &mut rng, states, self.3)
+            .apply_or(hex, &mut rng, states, self.4)
+    }
+}
+
 /// Try to swap with another cell `with_state` in some random `direction`.
 pub struct RandomSwap<D: Directions, S: States> {
     pub directions: D,

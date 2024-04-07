@@ -5,7 +5,7 @@ use rand::rngs::SmallRng;
 use crate::grid::BoardState;
 
 use super::{
-    behavior::{Chance, Drag, Infect, Offscreen, RandomSwap, Set, Step},
+    behavior::{Chance, Drag, Infect, Offscreen, Or5, RandomSwap, Set, Step},
     BoardSlice, HexColor, Register,
     StateId::{self, *},
     Tick,
@@ -28,15 +28,12 @@ impl HexColor for Wind {
 
 impl Tick for Wind {
     fn tick(&self, hex: &Hex, states: &BoardState, mut rng: &mut SmallRng) -> Option<BoardSlice> {
-        // Dissipate
-        Chance {
-            step: Set::new(StateId::Air),
-            chance: 0.01,
-        }
-        .apply_or(
-            hex,
-            &mut rng,
-            states,
+        Or5(
+            // Dissipate
+            Chance {
+                step: Set::new(StateId::Air),
+                chance: 0.01,
+            },
             Offscreen {
                 directions: [
                     EdgeDirection::POINTY_LEFT,
@@ -45,11 +42,6 @@ impl Tick for Wind {
                 ],
                 open: Air,
             },
-        )
-        .apply_or(
-            hex,
-            &mut rng,
-            states,
             Drag {
                 directions: [
                     EdgeDirection::POINTY_LEFT,
@@ -59,11 +51,6 @@ impl Tick for Wind {
                 open: [Air, Self::ID],
                 drag: [Water, Fire, Sand],
             },
-        )
-        .apply_or(
-            hex,
-            &mut rng,
-            states,
             Chance {
                 step: Infect {
                     directions: [
@@ -76,11 +63,6 @@ impl Tick for Wind {
                 },
                 chance: 0.01,
             },
-        )
-        .apply_or(
-            hex,
-            &mut rng,
-            states,
             RandomSwap {
                 directions: [
                     EdgeDirection::POINTY_LEFT,
@@ -90,5 +72,6 @@ impl Tick for Wind {
                 open: [Air, Self::ID],
             },
         )
+        .apply(hex, &mut rng, states)
     }
 }
