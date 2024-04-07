@@ -30,9 +30,18 @@ impl IntoIterator for StateId {
 
 /// A mutation of the board caused by a single cell.
 pub trait Step {
+    /// Try to generate a [`BoardSlice`] or return `None` if not
+    /// applicable.
     fn apply<R: rand::Rng>(self, _rng: R, states: &BoardState) -> Option<BoardSlice>;
 
-    fn apply_or<R: rand::Rng>(self, mut rng: R, states: &BoardState, s: impl Step) -> Option<BoardSlice>
+    /// If this [`Self::apply`] fails (provides None), then try to apply a
+    /// differnt `Step`.
+    fn apply_or<R: rand::Rng>(
+        self,
+        mut rng: R,
+        states: &BoardState,
+        s: impl Step,
+    ) -> Option<BoardSlice>
     where
         Self: Sized,
     {
@@ -47,7 +56,7 @@ impl Step for Option<BoardSlice> {
     }
 }
 
-/// Step off screen
+/// Fall off the screen.
 pub struct Offscreen<D: Directions, S: States> {
     pub from: Hex,
     pub directions: D,
@@ -60,11 +69,7 @@ impl<D: Directions, S: States> Step for Offscreen<D, S> {
             .from
             .neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
         if states.get_current(to).is_none() {
-            Set {
-                hex: self.from,
-                into: StateId::Air,
-            }
-            .apply(rng, states)
+            Set::new(self.from, StateId::Air).apply(rng, states)
         } else {
             None
         }
@@ -143,6 +148,71 @@ impl<S: Step> Step for Chance<S> {
     }
 }
 
+/// Randomly choose between two [`Step`]'s.
+pub struct Choose<A: Step, B: Step> {
+    pub a: A,
+    pub b: B,
+    /// How likely option `A` will be chosen.
+    pub chance: f32,
+}
+
+impl<A: Step, B: Step> Step for Choose<A, B> {
+    fn apply<R: rand::Rng>(self, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        if rng.gen::<f32>() < self.chance {
+            self.a.apply(rng, states)
+        } else {
+            self.b.apply(rng, states)
+        }
+    }
+}
+
+impl<A: Step, B: Step> Choose<A, B> {
+    pub fn half(a: A, b: B) -> Self {
+        Self { a, b, chance: 0.5 }
+    }
+}
+
+/// Conditionally apply a step.
+pub struct When<S, P>
+where
+    S: Step,
+    P: FnOnce(Hex, &BoardState) -> bool,
+{
+    pub hex: Hex,
+    pub predicate: P,
+    pub step: S,
+}
+
+impl<S, P> Step for When<S, P>
+where
+    S: Step,
+    P: FnOnce(Hex, &BoardState) -> bool,
+{
+    fn apply<R: rand::Rng>(self, _rng: R, states: &BoardState) -> Option<BoardSlice> {
+        if (self.predicate)(self.hex, states) {
+            self.step.apply(_rng, states)
+        } else {
+            None
+        }
+    }
+}
+
+/// Try first step and if it fails, then try second.
+pub struct Or<A, B>(pub A, pub B)
+where
+    A: Step,
+    B: Step;
+
+impl<A, B> Step for Or<A, B>
+where
+    A: Step,
+    B: Step,
+{
+    fn apply<R: rand::Rng>(self, rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0.apply_or(rng, states, self.1)
+    }
+}
+
 /// Try to swap with another cell `with_state` in some random `direction`.
 pub struct RandomSwap<D: Directions, S: States> {
     pub from: Hex,
@@ -210,5 +280,11 @@ impl<I: States> Step for Set<I> {
                 self.into.into_iter().choose(&mut rng).unwrap(),
             )]))
         }
+    }
+}
+
+impl<I: States> Set<I> {
+    pub fn new(hex: Hex, into: I) -> Self {
+        Self { hex, into }
     }
 }
