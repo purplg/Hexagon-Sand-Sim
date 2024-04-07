@@ -41,16 +41,6 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(PreUpdate, sim_system.run_if(on_event::<TickEvent>()));
         app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
         app.add_systems(Update, render_system);
-
-        let mut registry = CellRegistry::default();
-        registry.add(Air);
-        registry.add(Fire);
-        registry.add(Sand);
-        registry.add(Water);
-        registry.add(Steam);
-        registry.add(Stone);
-        registry.add(Wind);
-        app.insert_resource(registry);
     }
 }
 

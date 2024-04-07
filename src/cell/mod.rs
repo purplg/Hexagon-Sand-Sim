@@ -22,6 +22,22 @@ use bevy::prelude::*;
 use hexx::Hex;
 use rand::rngs::SmallRng;
 
+pub struct Plugin;
+
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) {
+        let mut registry = CellRegistry::default();
+        registry.add(Air);
+        registry.add(Fire);
+        registry.add(Sand);
+        registry.add(Water);
+        registry.add(Steam);
+        registry.add(Stone);
+        registry.add(Wind);
+        app.insert_resource(registry);
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct StateId(pub &'static str);
 
