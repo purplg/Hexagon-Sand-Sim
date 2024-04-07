@@ -13,8 +13,6 @@ mod steam;
 pub use steam::Steam;
 mod wind;
 pub use wind::Wind;
-mod tree;
-pub use tree::*;
 mod behavior;
 
 use crate::grid::BoardState;
