@@ -88,6 +88,7 @@ fn update_system(world: &mut World) {
             ui.radio_value(&mut palette.selected, Water::ID, "Water");
             ui.radio_value(&mut palette.selected, Steam::ID, "Steam");
             ui.radio_value(&mut palette.selected, Wind::ID, "Wind");
+            ui.radio_value(&mut palette.selected, Stone::ID, "Stone");
         });
     });
 }

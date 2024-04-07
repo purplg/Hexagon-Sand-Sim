@@ -48,6 +48,7 @@ impl bevy::prelude::Plugin for Plugin {
         registry.add(Sand);
         registry.add(Water);
         registry.add(Steam);
+        registry.add(Stone);
         registry.add(Wind);
         app.insert_resource(registry);
     }
