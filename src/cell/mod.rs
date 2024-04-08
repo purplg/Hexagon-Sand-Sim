@@ -1,5 +1,6 @@
-mod air;
+use std::borrow::Cow;
 
+mod air;
 pub use air::Air;
 mod fire;
 use bevy::utils::HashMap;
@@ -59,7 +60,7 @@ impl From<TypeId> for StateId {
 
 pub struct CellEntry {
     pub behavior: Box<dyn Tick + Send + Sync>,
-    pub name: &'static str,
+    pub name: Cow<'static, str>,
     pub color: Color,
     pub hidden: bool,
 }
@@ -82,7 +83,7 @@ impl CellRegistry {
             id,
             CellEntry {
                 behavior: Box::new(tickable),
-                name: T::NAME,
+                name: T::NAME.into(),
                 color: T::COLOR,
                 hidden: T::HIDDEN,
             },
