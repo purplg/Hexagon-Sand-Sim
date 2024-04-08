@@ -17,7 +17,10 @@ pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Palette>();
+        app.insert_resource(Palette {
+            selected: Air::id(),
+            brush_size: 1,
+        });
         app.add_plugins(EguiPlugin);
         app.add_plugins(DefaultInspectorConfigPlugin);
         app.add_systems(Update, update_system);
