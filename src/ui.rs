@@ -5,8 +5,7 @@ use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
     bevy_inspector::{self, ui_for_state},
     egui::{self, Id},
-    inspector_options::ReflectInspectorOptions,
-    DefaultInspectorConfigPlugin, InspectorOptions,
+    DefaultInspectorConfigPlugin,
 };
 
 use crate::{
@@ -51,12 +50,6 @@ fn update_system(world: &mut World) {
         });
 
         ui.add_space(16.);
-        ui.push_id(Id::from("metrics"), |ui| {
-            ui.heading("Metrics");
-            bevy_inspector::ui_for_resource::<Metrics>(world, ui);
-        });
-
-        ui.add_space(16.);
         ui.push_id(Id::from("Board"), |ui| {
             ui.heading("Board");
             bevy_inspector::ui_for_resource::<Board>(world, ui);
@@ -88,39 +81,6 @@ fn update_system(world: &mut World) {
             }
         });
     });
-}
-
-#[derive(Reflect, Resource, Default, InspectorOptions)]
-#[reflect(Resource, InspectorOptions)]
-pub struct Metrics {
-    fire: usize,
-    sand: usize,
-    water: usize,
-    steam: usize,
-    wind: usize,
-    total: usize,
-    movement: usize,
-}
-
-fn metrics_system(states: Res<BoardState>, mut metrics: ResMut<Metrics>) {
-    metrics.fire = 0;
-    metrics.sand = 0;
-    metrics.water = 0;
-    metrics.steam = 0;
-    metrics.wind = 0;
-    metrics.movement = 0;
-    for state in states.current.values() {
-        match *state {
-            Fire::id() => metrics.fire += 1,
-            Sand::id() => metrics.sand += 1,
-            Water::id() => metrics.water += 1,
-            Steam::id() => metrics.steam += 1,
-            Wind::id() => metrics.wind += 1,
-            _ => {}
-        }
-    }
-    metrics.total = metrics.fire + metrics.sand + metrics.water + metrics.steam;
-    metrics.movement = states.next.keys().count();
 }
 
 #[derive(Resource)]
