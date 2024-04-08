@@ -17,11 +17,9 @@ pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Metrics>();
         app.init_resource::<Palette>();
         app.add_plugins(EguiPlugin);
         app.add_plugins(DefaultInspectorConfigPlugin);
-        app.add_systems(Update, metrics_system);
         app.add_systems(Update, update_system);
     }
 }
