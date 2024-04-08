@@ -53,7 +53,7 @@ fn zoom(
     camera.scale *= 1. - zoom * dt.delta_seconds() * 50.;
 }
 
-fn pan(mut query: Query<&mut Transform>, input: Query<&ActionState<Input>>, dt: Res<Time>) {
+fn pan(mut query: Query<&mut Transform, With<Camera>>, input: Query<&ActionState<Input>>, dt: Res<Time>) {
     let mut transform = query.single_mut();
     let input = input.single();
     let Some(pan) = input.axis_pair(&Input::Pan) else {
