@@ -39,22 +39,22 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct StateId(pub u128);
+pub struct StateId(TypeId);
 
-impl From<u128> for StateId {
-    fn from(value: u128) -> Self {
+impl From<TypeId> for StateId {
+    fn from(value: TypeId) -> Self {
         Self(value)
     }
 }
 
-struct CellEntry {
-    tick: Box<dyn Tick + Send + Sync>,
-    name: &'static str,
-    color: Color,
-    hidden: bool,
+pub struct CellEntry {
+    pub behavior: Box<dyn Tick + Send + Sync>,
+    pub name: &'static str,
+    pub color: Color,
+    pub hidden: bool,
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Deref)]
 pub struct CellRegistry {
     inner: HashMap<StateId, CellEntry>,
 }
@@ -71,16 +71,12 @@ impl CellRegistry {
         self.inner.insert(
             id,
             CellEntry {
-                tick: Box::new(tickable),
+                behavior: Box::new(tickable),
                 name: T::NAME,
                 color: T::COLOR,
                 hidden: T::HIDDEN,
             },
         );
-    }
-
-    pub fn get(&self, id: &StateId) -> Option<&Box<dyn Tick + Send + Sync>> {
-        self.inner.get(id).map(|entry| &entry.tick)
     }
 
     pub fn names(&self) -> impl Iterator<Item = (StateId, String)> + '_ {
