@@ -1,4 +1,4 @@
-use std::array;
+use std::{array, fmt::Debug};
 
 use hexx::{EdgeDirection, Hex};
 use rand::seq::IteratorRandom;
@@ -154,11 +154,81 @@ impl<A: Step, B: Step> Choose<A, B> {
     }
 }
 
-/// Conditionally apply `on_true` when predicate returns `true`,
+/// Assert the condition is true, then an empty BoardSlice is return causing any
+/// apply operations to succeed and truncating any other further
+/// steps.
+pub struct Assert<C: FnOnce() -> bool>(pub C);
+
+impl<C: FnOnce() -> bool> Step for Assert<C> {
+    fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, _states: &BoardState) -> Option<BoardSlice> {
+        if self.0() {
+            None
+        } else {
+            Some(BoardSlice::EMPTY)
+        }
+    }
+}
+
+/// Print out the type and apply some step while in a behavior.
+pub struct Output<T>(pub T);
+
+impl<T: Debug + Step> Step for Output<T> {
+    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
+        println!("{:?}", self.0);
+        self.0.apply(hex, rng, states)
+    }
+}
+/// Apply `then` [`Step`] only if there is a cell of any provided
+/// states nearby.
+pub struct WhenNearby<N: States, S: Step> {
+    pub nearby: N,
+    pub range: u32,
+    pub count: usize,
+    pub then: S,
+}
+
+impl<'a, N: States, S: Step> Step for WhenNearby<N, S> {
+    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
+        for state in self.nearby {
+            if hex
+                .xrange(self.range)
+                .filter(|hex| states.is_state(*hex, state))
+                .count()
+                > self.count
+            {
+                return self.then.apply(hex, rng, states);
+            }
+        }
+        None
+    }
+}
+
+impl<N: States, S: Step> WhenNearby<N, S> {
+    pub fn any_adjacent(nearby: N, then: S) -> Self {
+        Self {
+            nearby,
+            range: 1,
+            count: 1,
+            then,
+        }
+    }
+
+    #[allow(unused)]
+    pub fn any(nearby: N, then: S, range: u32) -> Self {
+        Self {
+            nearby,
+            range,
+            count: 1,
+            then,
+        }
+    }
+}
+
+/// Conditionally apply `on_true` when condition returns `true`,
 /// otherwise apply `on_false`.
-pub struct If<P, T, F>(pub P, pub T, pub F)
+pub struct If<C, T, F>(pub C, pub T, pub F)
 where
-    P: FnOnce() -> bool,
+    C: FnOnce() -> bool,
     T: Step,
     F: Step;
 
@@ -177,15 +247,15 @@ where
     }
 }
 
-/// Conditionally apply `on_true` when predicate returns `true`.
-pub struct When<P, T>(pub P, pub T)
+/// Conditionally apply `on_true` when condition returns `true`.
+pub struct When<C, T>(pub C, pub T)
 where
-    P: FnOnce() -> bool,
+    C: FnOnce() -> bool,
     T: Step;
 
-impl<P, T> Step for When<P, T>
+impl<C, T> Step for When<C, T>
 where
-    P: FnOnce() -> bool,
+    C: FnOnce() -> bool,
     T: Step,
 {
     fn apply<R: rand::Rng>(self, hex: &Hex, _rng: R, states: &BoardState) -> Option<BoardSlice> {
@@ -198,14 +268,14 @@ where
 }
 
 /// Conditionally apply `on_false` when predicate returns `false`.
-pub struct Unless<P, F>(pub P, pub F)
+pub struct Unless<C, F>(pub C, pub F)
 where
-    P: FnOnce() -> bool,
+    C: FnOnce() -> bool,
     F: Step;
 
-impl<P, F> Step for Unless<P, F>
+impl<C, F> Step for Unless<C, F>
 where
-    P: FnOnce() -> bool,
+    C: FnOnce() -> bool,
     F: Step,
 {
     fn apply<R: rand::Rng>(self, hex: &Hex, _rng: R, states: &BoardState) -> Option<BoardSlice> {
@@ -305,6 +375,7 @@ where
 }
 
 /// Try to swap with another cell `with_state` in some random `direction`.
+#[derive(Debug)]
 pub struct RandomSwap<D: Directions, S: States> {
     pub directions: D,
     pub open: S,

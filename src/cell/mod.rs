@@ -15,6 +15,8 @@ mod wind;
 pub use wind::Wind;
 mod stone;
 pub use stone::Stone;
+mod tree;
+pub use tree::*;
 mod behavior;
 
 use crate::grid::BoardState;
@@ -34,6 +36,14 @@ impl bevy::prelude::Plugin for Plugin {
         registry.add(Steam);
         registry.add(Stone);
         registry.add(Wind);
+        registry.add(Seed);
+        registry.add(Dead);
+        registry.add(Trunk);
+        registry.add(BranchLeft);
+        registry.add(BranchRight);
+        registry.add(Leaf);
+        registry.add(Sapling);
+        registry.add(Twig);
         app.insert_resource(registry);
     }
 }
@@ -96,6 +106,10 @@ impl CellRegistry {
 
 #[derive(Deref, DerefMut)]
 pub struct BoardSlice(Vec<(Hex, StateId)>);
+
+impl BoardSlice {
+    const EMPTY: Self = Self(Vec::new());
+}
 
 pub trait Tick {
     fn tick(&self, _from: &Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice> {
