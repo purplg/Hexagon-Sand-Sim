@@ -193,20 +193,6 @@ fn control_system(
         rate.normal();
     }
 
-    if input.just_pressed(&Input::Grab) {
-        let (camera, camera_transform) = camera.single();
-        let window = window.single();
-        if let Some(world_position) = window
-            .cursor_position()
-            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
-            .map(|ray| ray.origin.truncate())
-        {
-            let hex = board.layout.world_pos_to_hex(world_position);
-            let state = states.get_current(hex);
-            println!("state: {:?}", state);
-        }
-    }
-
     if input.pressed(&Input::Select) {
         let (camera, camera_transform) = camera.single();
         let window = window.single();

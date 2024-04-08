@@ -1,17 +1,23 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    borrow::Cow,
+    ops::{Deref, DerefMut},
+};
 
 use bevy::{ecs::system::RunSystemOnce, prelude::*, window::PrimaryWindow};
 use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
     bevy_inspector::{self, ui_for_state},
     egui::{self, Id},
-    DefaultInspectorConfigPlugin,
+    inspector_options::ReflectInspectorOptions,
+    DefaultInspectorConfigPlugin, InspectorOptions,
 };
 
 use crate::{
     cell::*,
     grid::{self, Board, BoardState, SimState, TickRate},
 };
+
+static EMPTY_NAME: Cow<'static, str> = Cow::Owned(String::new());
 
 pub(super) struct Plugin;
 
@@ -21,9 +27,11 @@ impl bevy::prelude::Plugin for Plugin {
             selected: Air::id(),
             brush_size: 1,
         });
+        app.init_resource::<Tooltip>();
         app.add_plugins(EguiPlugin);
         app.add_plugins(DefaultInspectorConfigPlugin);
         app.add_systems(Update, update_system);
+        app.add_systems(Update, tooltip_system);
     }
 }
 
@@ -34,6 +42,10 @@ fn update_system(world: &mut World) {
         .clone();
 
     egui::SidePanel::left("sidepanel").show(egui_ctx.get_mut(), |ui| {
+        ui.add_space(16.);
+
+        bevy_inspector::ui_for_resource::<Tooltip>(world, ui);
+
         ui.add_space(16.);
         ui.push_id(Id::from("tickrate"), |ui| {
             ui_for_state::<SimState>(world, ui);
@@ -82,6 +94,36 @@ fn update_system(world: &mut World) {
             }
         });
     });
+}
+
+#[derive(Reflect, Default, Resource, InspectorOptions)]
+#[reflect(Resource, InspectorOptions)]
+struct Tooltip(Cow<'static, str>);
+
+fn tooltip_system(
+    states: Res<BoardState>,
+    registry: Res<CellRegistry>,
+    board: Res<Board>,
+    mut tooltip: ResMut<Tooltip>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    window: Query<&Window, With<PrimaryWindow>>,
+) {
+    let (camera, camera_transform) = camera.single();
+    let window = window.single();
+    let Some(world_position) = window
+        .cursor_position()
+        .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+        .map(|ray| ray.origin.truncate())
+    else {
+        return;
+    };
+
+    let hex = board.layout.world_pos_to_hex(world_position);
+    if let Some(entry) = states.get_current(hex).and_then(|id| registry.get(id)) {
+        tooltip.0 = entry.name.clone();
+    } else {
+        tooltip.0 = EMPTY_NAME.clone();
+    }
 }
 
 #[derive(Resource)]
