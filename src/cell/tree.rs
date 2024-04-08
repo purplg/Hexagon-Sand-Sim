@@ -31,7 +31,7 @@ impl Tick for Seed {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                open: Air::id(),
+                open: [Air::id(), Wind::id(), Steam::id()],
             },
             // Only attempt to grow when Sand or Water are nearby.
             WhenNearby::any_adjacent(
