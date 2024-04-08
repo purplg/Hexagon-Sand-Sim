@@ -17,7 +17,7 @@ impl StateInfo for Water {
 }
 impl Tick for Water {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        Or4(
+        Or5(
             // Evaporate
             Chance {
                 step: Set(Steam::id()),
@@ -41,6 +41,17 @@ impl Tick for Water {
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
                 open: Air::id(),
+            },
+            // Move through thick materials
+            Chance {
+                chance: 0.01,
+                step: RandomSwap {
+                    directions: [
+                        EdgeDirection::POINTY_TOP_LEFT,
+                        EdgeDirection::POINTY_TOP_RIGHT,
+                    ],
+                    open: Sand::id(),
+                },
             },
             // Move laterally.
             RandomSwap {

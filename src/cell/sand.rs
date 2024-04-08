@@ -23,7 +23,7 @@ impl Tick for Sand {
                 EdgeDirection::POINTY_BOTTOM_LEFT,
                 EdgeDirection::POINTY_BOTTOM_RIGHT,
             ],
-            open: [Air::id(), Wind::id(), Water::id(), Steam::id()],
+            open: [Air::id(), Wind::id(), Steam::id()],
         }
         .apply(hex, rng, states)
     }
