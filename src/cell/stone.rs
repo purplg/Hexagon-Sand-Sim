@@ -1,5 +1,6 @@
-use super::*;
 use bevy::prelude::*;
+
+use super::*;
 
 pub struct Stone;
 

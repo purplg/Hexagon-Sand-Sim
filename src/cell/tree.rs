@@ -1,15 +1,10 @@
-use std::fmt::Debug;
-
 use bevy::prelude::*;
 use hexx::EdgeDirection;
 use rand::Rng;
+use std::fmt::Debug;
 
-use self::behavior::{Assert, If, Noop, WhenNearby};
-
-use super::{
-    behavior::{Chance, Choose, Infect, Or, Or3, RandomSwap, Set, Step, Unless, When},
-    *,
-};
+use super::*;
+use crate::behavior::*;
 
 /// A particle that falls down, and when sand and water are nearby,
 /// turns into a [`Sapling`].

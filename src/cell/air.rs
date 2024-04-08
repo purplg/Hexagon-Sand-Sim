@@ -1,5 +1,7 @@
-use super::{behavior::*, *};
 use bevy::prelude::*;
+
+use super::*;
+use crate::behavior::*;
 
 pub struct Air;
 

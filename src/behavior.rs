@@ -3,9 +3,10 @@ use std::{array, fmt::Debug};
 use hexx::{EdgeDirection, Hex};
 use rand::seq::IteratorRandom;
 
-use crate::grid::BoardState;
-
-use super::{Air, BoardSlice, Register as _, StateId};
+use crate::{
+    cell::{Air, BoardSlice, Register as _, StateId},
+    grid::BoardState,
+};
 
 pub trait States: IntoIterator<Item = StateId> {}
 

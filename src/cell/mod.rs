@@ -18,7 +18,6 @@ mod stone;
 pub use stone::Stone;
 mod tree;
 pub use tree::*;
-mod behavior;
 
 use crate::grid::BoardState;
 use bevy::prelude::*;
@@ -106,10 +105,10 @@ impl CellRegistry {
 }
 
 #[derive(Deref, DerefMut)]
-pub struct BoardSlice(Vec<(Hex, StateId)>);
+pub struct BoardSlice(pub Vec<(Hex, StateId)>);
 
 impl BoardSlice {
-    const EMPTY: Self = Self(Vec::new());
+    pub const EMPTY: Self = Self(Vec::new());
 }
 
 pub trait Tick {

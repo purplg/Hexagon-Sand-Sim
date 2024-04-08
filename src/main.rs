@@ -1,5 +1,6 @@
 #![feature(const_type_id)]
 
+pub mod behavior;
 mod camera;
 mod cell;
 mod grid;

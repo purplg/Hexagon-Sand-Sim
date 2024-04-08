@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use hexx::EdgeDirection;
 
-use super::{behavior::*, *};
+use crate::behavior::*;
+use super::*;
 
 pub struct Fire;
 

@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use hexx::EdgeDirection;
 
-use super::{behavior::*, *};
+use super::*;
+use crate::behavior::*;
 
 pub struct Wind;
 
