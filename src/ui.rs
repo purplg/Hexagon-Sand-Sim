@@ -80,15 +80,12 @@ fn update_system(world: &mut World) {
 
     egui::TopBottomPanel::bottom("palette").show(egui_ctx.get_mut(), |ui| {
         ui.horizontal(|ui| {
+            let registry = world.resource::<CellRegistry>().names().collect::<Vec<_>>();
             let mut palette = world.resource_mut::<Palette>();
             ui.add(egui::Slider::new(&mut palette.brush_size, 0..=10));
-            ui.radio_value(&mut palette.selected, Air::ID, "Air");
-            ui.radio_value(&mut palette.selected, Fire::ID, "Fire");
-            ui.radio_value(&mut palette.selected, Sand::ID, "Sand");
-            ui.radio_value(&mut palette.selected, Water::ID, "Water");
-            ui.radio_value(&mut palette.selected, Steam::ID, "Steam");
-            ui.radio_value(&mut palette.selected, Wind::ID, "Wind");
-            ui.radio_value(&mut palette.selected, Stone::ID, "Stone");
+            for (id, name) in registry {
+                ui.radio_value(&mut palette.selected, id, name);
+            }
         });
     });
 }
@@ -114,11 +111,11 @@ fn metrics_system(states: Res<BoardState>, mut metrics: ResMut<Metrics>) {
     metrics.movement = 0;
     for state in states.current.values() {
         match *state {
-            Fire::ID => metrics.fire += 1,
-            Sand::ID => metrics.sand += 1,
-            Water::ID => metrics.water += 1,
-            Steam::ID => metrics.steam += 1,
-            Wind::ID => metrics.wind += 1,
+            Fire::id() => metrics.fire += 1,
+            Sand::id() => metrics.sand += 1,
+            Water::id() => metrics.water += 1,
+            Steam::id() => metrics.steam += 1,
+            Wind::id() => metrics.wind += 1,
             _ => {}
         }
     }
@@ -149,7 +146,7 @@ impl DerefMut for Palette {
 impl Default for Palette {
     fn default() -> Self {
         Self {
-            selected: Air::ID,
+            selected: Air::id(),
             brush_size: 1,
         }
     }

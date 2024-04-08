@@ -1,9 +1,9 @@
 mod air;
-use std::any::type_name;
 
 pub use air::Air;
 mod fire;
 use bevy::utils::HashMap;
+use bevy_inspector_egui::egui::util::id_type_map::TypeId;
 pub use fire::Fire;
 mod sand;
 pub use sand::Sand;
@@ -39,50 +39,61 @@ impl bevy::prelude::Plugin for Plugin {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct StateId(pub &'static str);
+pub struct StateId(pub u128);
 
-impl From<&'static str> for StateId {
-    fn from(value: &'static str) -> Self {
+impl From<u128> for StateId {
+    fn from(value: u128) -> Self {
         Self(value)
     }
 }
 
+struct CellEntry {
+    tick: Box<dyn Tick + Send + Sync>,
+    name: &'static str,
+    color: Color,
+    hidden: bool,
+}
+
 #[derive(Resource, Default)]
 pub struct CellRegistry {
-    inner: HashMap<StateId, Box<dyn Tick + Send + Sync>>,
-    color: HashMap<StateId, Color>,
+    inner: HashMap<StateId, CellEntry>,
 }
 
 impl CellRegistry {
     pub fn add<T>(&mut self, tickable: T)
     where
-        T: HexColor + Tick + Send + Sync + 'static,
+        T: StateInfo + Register + Tick + Send + Sync + 'static,
     {
-        self.add_with_color(tickable, T::COLOR)
-    }
-
-    pub fn add_with_color<T>(&mut self, tickable: T, color: Color)
-    where
-        T: Tick + Send + Sync + 'static,
-    {
-        let id: StateId = type_name::<T>().into();
+        let id: StateId = TypeId::of::<T>().into();
         if self.inner.contains_key(&id) {
             panic!("StateId::{:?} already exists in Tick registry.", id);
         }
-        if self.color.contains_key(&id) {
-            panic!("StateId::{:?} already exists in Color registry.", id);
-        }
-        self.inner.insert(id, Box::new(tickable));
-        self.color.insert(id, color);
+        self.inner.insert(
+            id,
+            CellEntry {
+                tick: Box::new(tickable),
+                name: T::NAME,
+                color: T::COLOR,
+                hidden: T::HIDDEN,
+            },
+        );
     }
 
-    pub fn get(&self, id: &StateId) -> Option<&(dyn Tick + Send + Sync)> {
-        self.inner.get(id).map(|a| &**a)
+    pub fn get(&self, id: &StateId) -> Option<&Box<dyn Tick + Send + Sync>> {
+        self.inner.get(id).map(|entry| &entry.tick)
+    }
+
+    pub fn names(&self) -> impl Iterator<Item = (StateId, String)> + '_ {
+        self.inner
+            .iter()
+            .filter(|(_id, entry)| !entry.hidden)
+            .map(|(id, entry)| (id.clone(), entry.name.to_string()))
     }
 
     pub fn color(&self, id: &StateId) -> &Color {
-        self.color
+        self.inner
             .get(id)
+            .map(|entry| &entry.color)
             .unwrap_or_else(|| panic!("StateID {:?} missing from Color registry", id))
     }
 }
@@ -102,17 +113,21 @@ impl From<StateId> for Vec<StateId> {
     }
 }
 
-pub trait Register {
-    const ID: StateId;
-}
-
-impl<T> Register for T
+pub trait Register
 where
-    T: Tick,
+    Self: Sized + 'static,
 {
-    const ID: StateId = StateId(type_name::<T>());
+    fn id() -> StateId {
+        StateId(TypeId::of::<Self>())
+    }
 }
 
-pub trait HexColor {
-    const COLOR: Color;
+impl<T> Register for T where T: StateInfo + 'static {}
+
+/// Meta information about a state type generally for displaying to
+/// the user.
+pub trait StateInfo {
+    const NAME: &'static str = "Unknown";
+    const COLOR: Color = Color::NONE;
+    const HIDDEN: bool = true;
 }

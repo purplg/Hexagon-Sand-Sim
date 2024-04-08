@@ -5,20 +5,22 @@ use super::{behavior::*, *};
 
 pub struct Fire;
 
-impl HexColor for Fire {
+impl StateInfo for Fire {
+    const NAME: &'static str = "Fire";
     const COLOR: Color = Color::Rgba {
         red: 1.0,
         green: 0.0,
         blue: 0.0,
         alpha: 1.0,
     };
+    const HIDDEN: bool = false;
 }
 
 impl Tick for Fire {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         Or3(
             Chance {
-                step: Set(Air::ID),
+                step: Set(Air::id()),
                 chance: 0.005,
             },
             Infect {
@@ -28,8 +30,8 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: Water::ID,
-                into: Steam::ID,
+                open: Water::id(),
+                into: Steam::id(),
             },
             RandomSwap {
                 directions: [
@@ -38,7 +40,7 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [Air::ID, Water::ID, Sand::ID],
+                open: [Air::id(), Water::id(), Sand::id()],
             },
         )
         .apply(hex, rng, states)

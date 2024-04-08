@@ -5,13 +5,15 @@ use super::{behavior::*, *};
 
 pub struct Wind;
 
-impl HexColor for Wind {
+impl StateInfo for Wind {
+    const NAME: &'static str = "Wind";
     const COLOR: Color = Color::Rgba {
         red: 1.0,
         green: 1.0,
         blue: 1.0,
         alpha: 0.01,
     };
+    const HIDDEN: bool = false;
 }
 
 impl Tick for Wind {
@@ -19,7 +21,7 @@ impl Tick for Wind {
         Or5(
             // Dissipate
             Chance {
-                step: Set(Air::ID),
+                step: Set(Air::id()),
                 chance: 0.01,
             },
             Offscreen([
@@ -33,8 +35,8 @@ impl Tick for Wind {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_TOP_LEFT,
                 ],
-                open: [Air::ID, Self::ID],
-                drag: [Water::ID, Fire::ID, Sand::ID],
+                open: [Air::id(), Self::id()],
+                drag: [Water::id(), Fire::id(), Sand::id()],
             },
             Chance {
                 step: Infect {
@@ -43,8 +45,8 @@ impl Tick for Wind {
                         EdgeDirection::POINTY_BOTTOM_LEFT,
                         EdgeDirection::POINTY_TOP_LEFT,
                     ],
-                    open: [Air::ID, Self::ID],
-                    into: Self::ID,
+                    open: [Air::id(), Self::id()],
+                    into: Self::id(),
                 },
                 chance: 0.01,
             },
@@ -54,7 +56,7 @@ impl Tick for Wind {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_TOP_LEFT,
                 ],
-                open: [Air::ID, Self::ID],
+                open: [Air::id(), Self::id()],
             },
         )
         .apply(hex, rng, states)

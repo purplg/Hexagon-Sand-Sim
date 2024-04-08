@@ -1,4 +1,4 @@
-#![feature(const_type_name)]
+#![feature(const_type_id)]
 
 mod camera;
 mod cell;

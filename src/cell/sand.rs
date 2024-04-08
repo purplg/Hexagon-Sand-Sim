@@ -5,13 +5,15 @@ use super::{behavior::*, *};
 
 pub struct Sand;
 
-impl HexColor for Sand {
+impl StateInfo for Sand {
+    const NAME: &'static str = "Sand";
     const COLOR: Color = Color::Rgba {
         red: 1.0,
         green: 1.0,
         blue: 0.0,
         alpha: 1.0,
     };
+    const HIDDEN: bool = false;
 }
 
 impl Tick for Sand {
@@ -21,7 +23,7 @@ impl Tick for Sand {
                 EdgeDirection::POINTY_BOTTOM_LEFT,
                 EdgeDirection::POINTY_BOTTOM_RIGHT,
             ],
-            open: [Air::ID, Wind::ID, Water::ID, Steam::ID],
+            open: [Air::id(), Wind::id(), Water::id(), Steam::id()],
         }
         .apply(hex, rng, states)
     }

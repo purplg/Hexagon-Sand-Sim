@@ -78,13 +78,13 @@ pub fn startup_system(
     for hex in board.bounds.all_coords() {
         let chance: f32 = rng.gen();
         let state_id = if chance < 0.25 {
-            Sand::ID
+            Sand::id()
         } else if chance < 0.50 {
-            Fire::ID
+            Fire::id()
         } else if chance < 0.75 {
-            Water::ID
+            Water::id()
         } else {
-            Air::ID
+            Air::id()
         };
         states.set(hex, state_id);
     }

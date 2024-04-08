@@ -56,7 +56,7 @@ impl<D: Directions> Step for Offscreen<D> {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         let to = hex.neighbor(self.0.into_iter().choose(&mut rng).unwrap());
         if states.get_current(to).is_none() {
-            Set(Air::ID).apply(hex, rng, states)
+            Set(Air::id()).apply(hex, rng, states)
         } else {
             None
         }

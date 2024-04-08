@@ -5,13 +5,15 @@ use super::{behavior::*, *};
 
 pub struct Steam;
 
-impl HexColor for Steam {
+impl StateInfo for Steam {
+    const NAME: &'static str = "Steam";
     const COLOR: Color = Color::Rgba {
         red: 1.0,
         green: 1.0,
         blue: 1.0,
         alpha: 0.5,
     };
+    const HIDDEN: bool = false;
 }
 
 impl Tick for Steam {
@@ -19,7 +21,7 @@ impl Tick for Steam {
         Or3(
             // Condense
             Chance {
-                step: Set(Water::ID),
+                step: Set(Water::id()),
                 chance: 0.0001,
             },
             // Move up
@@ -28,12 +30,12 @@ impl Tick for Steam {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [Air::ID, Water::ID],
+                open: [Air::id(), Water::id()],
             },
             // Move laterally.
             RandomSwap {
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                open: [Air::ID, Water::ID, Fire::ID],
+                open: [Air::id(), Water::id(), Fire::id()],
             },
         )
         .apply(hex, rng, states)
