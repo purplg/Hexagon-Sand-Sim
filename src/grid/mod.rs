@@ -28,7 +28,7 @@ impl bevy::prelude::Plugin for Plugin {
             bounds: HexBounds::from_radius(64),
         });
         app.init_resource::<BoardState>();
-        app.insert_resource(TickRate::new(Duration::from_millis(50)));
+        app.insert_resource(TickRate::new(Duration::from_millis(15)));
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
 
