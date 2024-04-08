@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    cmp::Ordering,
     ops::{Deref, DerefMut},
 };
 
@@ -89,7 +90,9 @@ fn update_system(world: &mut World) {
             let registry = world.resource::<CellRegistry>().names().collect::<Vec<_>>();
             let mut palette = world.resource_mut::<Palette>();
             ui.add(egui::Slider::new(&mut palette.brush_size, 0..=10));
-            for (id, name) in registry {
+            let mut cells = registry.into_iter().collect::<Vec<_>>();
+            cells.sort_by(|(_id_a, name_a), (_id_b, name_b)| name_a.cmp(name_b));
+            for (id, name) in cells {
                 ui.radio_value(&mut palette.selected, id, name);
             }
         });
