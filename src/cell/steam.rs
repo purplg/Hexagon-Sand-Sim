@@ -19,7 +19,7 @@ impl StateInfo for Steam {
 
 impl Tick for Steam {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        Or3(
+        (
             // Condense
             Chance {
                 step: Set(Water::id()),
@@ -39,6 +39,6 @@ impl Tick for Steam {
                 open: [Air::id(), Water::id(), Fire::id()],
             },
         )
-        .apply(hex, rng, states)
+            .apply(hex, rng, states)
     }
 }

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use hexx::EdgeDirection;
 
-use crate::behavior::*;
 use super::*;
+use crate::behavior::*;
 
 pub struct Fire;
 
@@ -19,7 +19,7 @@ impl StateInfo for Fire {
 
 impl Tick for Fire {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        Or3(
+        (
             Chance {
                 step: Set(Air::id()),
                 chance: 0.005,
@@ -44,6 +44,6 @@ impl Tick for Fire {
                 open: [Air::id(), Water::id(), Sand::id()],
             },
         )
-        .apply(hex, rng, states)
+            .apply(hex, rng, states)
     }
 }

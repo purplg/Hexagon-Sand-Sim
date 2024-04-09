@@ -19,7 +19,7 @@ impl StateInfo for Wind {
 
 impl Tick for Wind {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        Or5(
+        (
             // Dissipate
             Chance {
                 step: Set(Air::id()),
@@ -60,6 +60,6 @@ impl Tick for Wind {
                 open: [Air::id(), Self::id()],
             },
         )
-        .apply(hex, rng, states)
+            .apply(hex, rng, states)
     }
 }

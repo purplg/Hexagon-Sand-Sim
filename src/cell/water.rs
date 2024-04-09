@@ -18,7 +18,7 @@ impl StateInfo for Water {
 }
 impl Tick for Water {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        Or5(
+        (
             // Evaporate
             Chance {
                 step: Set(Steam::id()),

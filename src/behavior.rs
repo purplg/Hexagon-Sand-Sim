@@ -353,17 +353,7 @@ where
 }
 
 /// Try first step and if it fails, then try second.
-#[derive(Debug)]
-pub struct Or<A, B>(pub A, pub B)
-where
-    A: Step,
-    B: Step;
-
-impl<A, B> Step for Or<A, B>
-where
-    A: Step,
-    B: Step,
-{
+impl<A: Step, B: Step> Step for (A, B) {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
             .apply(hex, &mut rng, states)
@@ -371,19 +361,7 @@ where
     }
 }
 
-#[derive(Debug)]
-pub struct Or3<A, B, C>(pub A, pub B, pub C)
-where
-    A: Step,
-    B: Step,
-    C: Step;
-
-impl<A, B, C> Step for Or3<A, B, C>
-where
-    A: Step,
-    B: Step,
-    C: Step,
-{
+impl<A: Step, B: Step, C: Step> Step for (A, B, C) {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
             .apply(hex, &mut rng, states)
@@ -392,21 +370,7 @@ where
     }
 }
 
-#[derive(Debug)]
-pub struct Or4<A, B, C, D>(pub A, pub B, pub C, pub D)
-where
-    A: Step,
-    B: Step,
-    C: Step,
-    D: Step;
-
-impl<A, B, C, D> Step for Or4<A, B, C, D>
-where
-    A: Step,
-    B: Step,
-    C: Step,
-    D: Step,
-{
+impl<A: Step, B: Step, C: Step, D: Step> Step for (A, B, C, D) {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
             .apply(hex, &mut rng, states)
@@ -416,23 +380,7 @@ where
     }
 }
 
-#[derive(Debug)]
-pub struct Or5<A, B, C, D, E>(pub A, pub B, pub C, pub D, pub E)
-where
-    A: Step,
-    B: Step,
-    C: Step,
-    D: Step,
-    E: Step;
-
-impl<A, B, C, D, E> Step for Or5<A, B, C, D, E>
-where
-    A: Step,
-    B: Step,
-    C: Step,
-    D: Step,
-    E: Step,
-{
+impl<A: Step, B: Step, C: Step, D: Step, E: Step> Step for (A, B, C, D, E) {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
             .apply(hex, &mut rng, states)
