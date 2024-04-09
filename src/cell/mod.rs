@@ -104,7 +104,7 @@ impl CellRegistry {
     }
 }
 
-#[derive(Deref, DerefMut)]
+#[derive(Debug, Deref, DerefMut)]
 pub struct BoardSlice(pub Vec<(Hex, StateId)>);
 
 impl BoardSlice {

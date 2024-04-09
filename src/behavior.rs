@@ -8,13 +8,13 @@ use crate::{
     grid::BoardState,
 };
 
-pub trait States: IntoIterator<Item = StateId> {}
+pub trait States: IntoIterator<Item = StateId> + Debug {}
 
-impl<T> States for T where T: IntoIterator<Item = StateId> {}
+impl<T> States for T where T: IntoIterator<Item = StateId> + Debug {}
 
-pub trait Directions: IntoIterator<Item = EdgeDirection> {}
+pub trait Directions: IntoIterator<Item = EdgeDirection> + Debug {}
 
-impl<T> Directions for T where T: IntoIterator<Item = EdgeDirection> {}
+impl<T> Directions for T where T: IntoIterator<Item = EdgeDirection> + Debug {}
 
 /// Conveniently convert a single StateId into an Iterator for more
 /// ergonomic API when creating a behavior that takes in multiple
@@ -30,7 +30,7 @@ impl IntoIterator for StateId {
 }
 
 /// A mutation of the board caused by a single cell.
-pub trait Step {
+pub trait Step: Debug {
     /// Try to generate a [`BoardSlice`] or return `None` if not
     /// applicable.
     fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, _states: &BoardState) -> Option<BoardSlice>;
@@ -42,6 +42,7 @@ impl Step for Option<BoardSlice> {
     }
 }
 
+#[derive(Debug)]
 pub struct Noop;
 
 impl Step for Noop {
@@ -64,7 +65,14 @@ impl<D: Directions> Step for Offscreen<D> {
     }
 }
 
+impl<D: Directions> Debug for Offscreen<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Offscreen({:?})", self.0)
+    }
+}
+
 /// Convert other nearby cells into another state on collision.
+#[derive(Debug)]
 pub struct Infect<D: Directions, S: States, I: States> {
     pub directions: D,
     pub open: S,
@@ -86,6 +94,7 @@ impl<D: Directions, S: States, I: States> Step for Infect<D, S, I> {
 }
 
 /// Drag another cell.
+#[derive(Debug)]
 pub struct Drag<D: Directions, S: States, P: States> {
     pub directions: D,
     pub open: S,
@@ -115,6 +124,7 @@ impl<D: Directions, S: States, P: States> Step for Drag<D, S, P> {
 }
 
 /// A chance for another step to occur.
+#[derive(Debug)]
 pub struct Chance<S: Step> {
     pub step: S,
     pub chance: f32,
@@ -132,6 +142,7 @@ impl<S: Step> Step for Chance<S> {
 }
 
 /// Randomly choose between two [`Step`]'s.
+#[derive(Debug)]
 pub struct Choose<A: Step, B: Step> {
     pub a: A,
     pub b: B,
@@ -155,9 +166,10 @@ impl<A: Step, B: Step> Choose<A, B> {
     }
 }
 
-/// Assert the condition is true, then an empty BoardSlice is return causing any
-/// apply operations to succeed and truncating any other further
-/// steps.
+/// Assert the condition is true, then an empty BoardSlice is return
+/// causing any apply operations to succeed and truncating any other
+/// further steps. Useful for reducing the scope by removing
+/// conditional [`Step`]'s.
 pub struct Assert<C: FnOnce() -> bool>(pub C);
 
 impl<C: FnOnce() -> bool> Step for Assert<C> {
@@ -170,17 +182,26 @@ impl<C: FnOnce() -> bool> Step for Assert<C> {
     }
 }
 
+impl<C: FnOnce() -> bool> Debug for Assert<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Assert")
+    }
+}
+
 /// Print out the type and apply some step while in a behavior.
+#[derive(Debug)]
 pub struct Output<T>(pub T);
 
-impl<T: Debug + Step> Step for Output<T> {
+impl<T: Step> Step for Output<T> {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
         println!("{:?}", self.0);
         self.0.apply(hex, rng, states)
     }
 }
+
 /// Apply `then` [`Step`] only if there is a cell of any provided
 /// states nearby.
+#[derive(Debug)]
 pub struct WhenNearby<N: States, S: Step> {
     pub nearby: N,
     pub range: u32,
@@ -248,6 +269,17 @@ where
     }
 }
 
+impl<C, T, F> Debug for If<C, T, F>
+where
+    C: FnOnce() -> bool,
+    T: Step,
+    F: Step,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "If({:?} else {:?})", self.1, self.2)
+    }
+}
+
 /// Conditionally apply `on_true` when condition returns `true`.
 pub struct When<C, T>(pub C, pub T)
 where
@@ -265,6 +297,16 @@ where
         } else {
             None
         }
+    }
+}
+
+impl<C, T> Debug for When<C, T>
+where
+    C: FnOnce() -> bool,
+    T: Step,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "When({:?})", self.1)
     }
 }
 
@@ -288,7 +330,18 @@ where
     }
 }
 
+impl<C, F> Debug for Unless<C, F>
+where
+    C: FnOnce() -> bool,
+    F: Step,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Unless({:?})", self.1)
+    }
+}
+
 /// Try first step and if it fails, then try second.
+#[derive(Debug)]
 pub struct Or<A, B>(pub A, pub B)
 where
     A: Step,
@@ -306,6 +359,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct Or3<A, B, C>(pub A, pub B, pub C)
 where
     A: Step,
@@ -326,6 +380,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct Or4<A, B, C, D>(pub A, pub B, pub C, pub D)
 where
     A: Step,
@@ -349,6 +404,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct Or5<A, B, C, D, E>(pub A, pub B, pub C, pub D, pub E)
 where
     A: Step,
@@ -404,6 +460,7 @@ impl<D: Directions, S: States> RandomSwap<D, S> {
 }
 
 /// Swap places with another cell.
+#[derive(Debug)]
 pub struct Swap {
     other: Hex,
 }
@@ -427,6 +484,7 @@ impl Step for Swap {
 }
 
 /// Set the state of a cell
+#[derive(Debug)]
 pub struct Set<I: States>(pub I);
 
 impl<I: States> Step for Set<I> {
