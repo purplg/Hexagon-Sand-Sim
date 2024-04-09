@@ -1,6 +1,5 @@
 use std::{
     borrow::Cow,
-    cmp::Ordering,
     ops::{Deref, DerefMut},
 };
 
