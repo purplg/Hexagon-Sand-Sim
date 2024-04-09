@@ -188,14 +188,26 @@ impl<C: FnOnce() -> bool> Debug for Assert<C> {
     }
 }
 
-/// Print out the type and apply some step while in a behavior.
+/// Print out the type with a prefix message and apply some step while
+/// in a behavior.
 #[derive(Debug)]
-pub struct Output<T>(pub T);
+pub struct Output<'a, T>(pub &'a str, pub T);
 
-impl<T: Step> Step for Output<T> {
+impl<'a, T: Step> Step for Output<'a, T> {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
-        println!("{:?}", self.0);
-        self.0.apply(hex, rng, states)
+        println!("{}: {:?}", self.0, self.1);
+        self.1.apply(hex, rng, states)
+    }
+}
+
+/// Print out a message without doing anything.
+#[derive(Debug)]
+pub struct Message<'a>(pub &'a str);
+
+impl<'a> Step for Message<'a> {
+    fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, _states: &BoardState) -> Option<BoardSlice> {
+        println!("{}", self.0);
+        None
     }
 }
 
