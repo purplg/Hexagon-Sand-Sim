@@ -247,8 +247,7 @@ impl<N: States, S: Step> WhenNearby<N, S> {
         }
     }
 
-    #[allow(unused)]
-    pub fn any(nearby: N, then: S, range: u32) -> Self {
+    pub fn any(nearby: N, range: u32, then: S) -> Self {
         Self {
             nearby,
             range,
