@@ -228,7 +228,7 @@ impl<'a, N: States, S: Step> Step for WhenNearby<N, S> {
                 .xrange(self.range)
                 .filter(|hex| states.is_state(*hex, state))
                 .count()
-                > self.count
+                >= self.count
             {
                 return self.then.apply(hex, rng, states);
             }
