@@ -5,7 +5,7 @@ use std::fmt::Debug;
 
 use super::*;
 use crate::behavior::{
-    Assert, Chance, Choose, If, Infect, RandomSwap, Set, Step as _, Unless, When, WhenNearby,
+    Assert, Chance, Choose, If, Infect, RandomSwap, Set, Step, Unless, When, WhenNearby,
 };
 
 /// A particle that falls down, and when sand and water are nearby,
@@ -148,6 +148,55 @@ impl StateInfo for Dead {
 impl Tick for Dead {}
 
 #[derive(Debug)]
+struct Branch {
+    direction: EdgeDirection,
+    grow_into: StateId,
+}
+
+impl Step for Branch {
+    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
+        (
+            // When next to other tree components, just stop doing anything.
+            WhenNearby::some_adjacent(
+                [
+                    BranchLeft::id(),
+                    BranchRight::id(),
+                    Dead::id(),
+                    Trunk::id(),
+                    Twig::id(),
+                ],
+                2,
+                Set(Dead::id()),
+            ),
+            // When near other branches, also stop doing anything
+            WhenNearby::any([BranchLeft::id(), BranchRight::id()], 25, Set(Dead::id())),
+            // Otherwise, try and grow right.
+            When(
+                || states.is_state(hex.neighbor(self.direction), Air::id()),
+                Infect {
+                    directions: [self.direction],
+                    open: [
+                        Air::id(),
+                        Sand::id(),
+                        Water::id(),
+                        Sapling::id(),
+                        Seed::id(),
+                    ],
+                    into: self.grow_into,
+                },
+            ),
+            // If can't grow anymore, turn into twig.
+            Choose {
+                a: Set(Twig::id()),
+                b: Set(Dead::id()),
+                chance: 0.8,
+            },
+        )
+            .apply(hex, rng, states)
+    }
+}
+
+#[derive(Debug)]
 pub struct BranchLeft;
 
 impl StateInfo for BranchLeft {
@@ -162,45 +211,11 @@ impl StateInfo for BranchLeft {
 
 impl Tick for BranchLeft {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        (
-            // When next to other tree components, just stop doing anything.
-            WhenNearby::some_adjacent(
-                [
-                    Dead::id(),
-                    BranchLeft::id(),
-                    BranchRight::id(),
-                    Trunk::id(),
-                    Twig::id(),
-                ],
-                2,
-                Set(Dead::id()),
-            ),
-            // When near other branches, also stop doing anything
-            WhenNearby::any(Self::id(), 25, Set(Dead::id())),
-            // Otherwise, try and grow left.
-            When(
-                || states.is_state(hex.neighbor(EdgeDirection::POINTY_TOP_LEFT), Air::id()),
-                Infect {
-                    directions: [EdgeDirection::POINTY_TOP_LEFT],
-                    open: [
-                        Air::id(),
-                        Sand::id(),
-                        Water::id(),
-                        Sapling::id(),
-                        Leaf::id(),
-                        Seed::id(),
-                    ],
-                    into: Self::id(),
-                },
-            ),
-            // If can't grow anymore, turn into twig.
-            Choose {
-                a: Set(Twig::id()),
-                b: Set(Dead::id()),
-                chance: 0.1,
-            },
-        )
-            .apply(hex, rng, states)
+        Branch {
+            direction: EdgeDirection::POINTY_TOP_LEFT,
+            grow_into: Self::id(),
+        }
+        .apply(hex, rng, states)
     }
 }
 
@@ -219,44 +234,11 @@ impl StateInfo for BranchRight {
 
 impl Tick for BranchRight {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        (
-            // When next to other tree components, just stop doing anything.
-            WhenNearby::some_adjacent(
-                [
-                    Dead::id(),
-                    BranchLeft::id(),
-                    BranchRight::id(),
-                    Trunk::id(),
-                    Twig::id(),
-                ],
-                2,
-                Set(Dead::id()),
-            ),
-            // When near other branches, also stop doing anything
-            WhenNearby::any(Self::id(), 25, Set(Dead::id())),
-            // Otherwise, try and grow right.
-            When(
-                || states.is_state(hex.neighbor(EdgeDirection::POINTY_TOP_RIGHT), Air::id()),
-                Infect {
-                    directions: [EdgeDirection::POINTY_TOP_RIGHT],
-                    open: [
-                        Air::id(),
-                        Sand::id(),
-                        Water::id(),
-                        Sapling::id(),
-                        Seed::id(),
-                    ],
-                    into: Self::id(),
-                },
-            ),
-            // If can't grow anymore, turn into twig.
-            Choose {
-                a: Set(Twig::id()),
-                b: Set(Dead::id()),
-                chance: 0.1,
-            },
-        )
-            .apply(hex, rng, states)
+        Branch {
+            direction: EdgeDirection::POINTY_TOP_RIGHT,
+            grow_into: Self::id(),
+        }
+        .apply(hex, rng, states)
     }
 }
 
