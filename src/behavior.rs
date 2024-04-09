@@ -200,6 +200,7 @@ impl<A: Step, B: Step> Step for Choose<A, B> {
 }
 
 impl<A: Step, B: Step> Choose<A, B> {
+    /// Evenly choose between A or B.
     pub fn half(a: A, b: B) -> Self {
         Self { a, b, chance: 0.5 }
     }
