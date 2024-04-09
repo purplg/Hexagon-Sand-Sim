@@ -36,6 +36,45 @@ pub trait Step: Debug {
     fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, _states: &BoardState) -> Option<BoardSlice>;
 }
 
+/// Try first step and if it fails, then try second.
+impl<A: Step, B: Step> Step for (A, B) {
+    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0
+            .apply(hex, &mut rng, states)
+            .or_else(|| self.1.apply(hex, &mut rng, states))
+    }
+}
+
+impl<A: Step, B: Step, C: Step> Step for (A, B, C) {
+    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0
+            .apply(hex, &mut rng, states)
+            .or_else(|| self.1.apply(hex, &mut rng, states))
+            .or_else(|| self.2.apply(hex, &mut rng, states))
+    }
+}
+
+impl<A: Step, B: Step, C: Step, D: Step> Step for (A, B, C, D) {
+    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0
+            .apply(hex, &mut rng, states)
+            .or_else(|| self.1.apply(hex, &mut rng, states))
+            .or_else(|| self.2.apply(hex, &mut rng, states))
+            .or_else(|| self.3.apply(hex, &mut rng, states))
+    }
+}
+
+impl<A: Step, B: Step, C: Step, D: Step, E: Step> Step for (A, B, C, D, E) {
+    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0
+            .apply(hex, &mut rng, states)
+            .or_else(|| self.1.apply(hex, &mut rng, states))
+            .or_else(|| self.2.apply(hex, &mut rng, states))
+            .or_else(|| self.3.apply(hex, &mut rng, states))
+            .or_else(|| self.4.apply(hex, &mut rng, states))
+    }
+}
+
 impl Step for Option<BoardSlice> {
     fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, _states: &BoardState) -> Option<BoardSlice> {
         self
@@ -357,45 +396,6 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Unless({:?})", self.1)
-    }
-}
-
-/// Try first step and if it fails, then try second.
-impl<A: Step, B: Step> Step for (A, B) {
-    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
-        self.0
-            .apply(hex, &mut rng, states)
-            .or_else(|| self.1.apply(hex, &mut rng, states))
-    }
-}
-
-impl<A: Step, B: Step, C: Step> Step for (A, B, C) {
-    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
-        self.0
-            .apply(hex, &mut rng, states)
-            .or_else(|| self.1.apply(hex, &mut rng, states))
-            .or_else(|| self.2.apply(hex, &mut rng, states))
-    }
-}
-
-impl<A: Step, B: Step, C: Step, D: Step> Step for (A, B, C, D) {
-    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
-        self.0
-            .apply(hex, &mut rng, states)
-            .or_else(|| self.1.apply(hex, &mut rng, states))
-            .or_else(|| self.2.apply(hex, &mut rng, states))
-            .or_else(|| self.3.apply(hex, &mut rng, states))
-    }
-}
-
-impl<A: Step, B: Step, C: Step, D: Step, E: Step> Step for (A, B, C, D, E) {
-    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
-        self.0
-            .apply(hex, &mut rng, states)
-            .or_else(|| self.1.apply(hex, &mut rng, states))
-            .or_else(|| self.2.apply(hex, &mut rng, states))
-            .or_else(|| self.3.apply(hex, &mut rng, states))
-            .or_else(|| self.4.apply(hex, &mut rng, states))
     }
 }
 
