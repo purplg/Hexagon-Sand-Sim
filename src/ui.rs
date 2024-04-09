@@ -122,9 +122,9 @@ fn tooltip_system(
 
     let hex = board.layout.world_pos_to_hex(world_position);
     if let Some(entry) = states.get_current(hex).and_then(|id| registry.get(id)) {
-        tooltip.0 = entry.name.clone();
+        tooltip.0.clone_from(&entry.name);
     } else {
-        tooltip.0 = EMPTY_NAME.clone();
+        tooltip.0.clone_from(&EMPTY_NAME) ;
     }
 }
 

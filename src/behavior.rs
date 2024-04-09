@@ -261,7 +261,7 @@ pub struct WhenNearby<N: States, S: Step> {
     pub then: S,
 }
 
-impl<'a, N: States, S: Step> Step for WhenNearby<N, S> {
+impl<N: States, S: Step> Step for WhenNearby<N, S> {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
         for state in self.nearby {
             if hex

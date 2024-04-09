@@ -93,7 +93,7 @@ impl CellRegistry {
         self.inner
             .iter()
             .filter(|(_id, entry)| !entry.hidden)
-            .map(|(id, entry)| (id.clone(), entry.name.to_string()))
+            .map(|(id, entry)| (*id, entry.name.to_string()))
     }
 
     pub fn color(&self, id: &StateId) -> &Color {
