@@ -255,6 +255,15 @@ impl<N: States, S: Step> WhenNearby<N, S> {
             then,
         }
     }
+
+    pub fn some_adjacent(nearby: N, count: usize, then: S) -> Self {
+        Self {
+            nearby,
+            range: 1,
+            count,
+            then,
+        }
+    }
 }
 
 /// Conditionally apply `on_true` when condition returns `true`,
