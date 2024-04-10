@@ -46,7 +46,7 @@ impl BoardState {
         hex: Hex,
         state: impl IntoIterator<Item = impl Into<StateId>>,
     ) -> Option<StateId> {
-        self.get_current(hex).and_then(|id| {
+        self.get_next(hex).and_then(|id| {
             state
                 .into_iter()
                 .map(Into::into)
