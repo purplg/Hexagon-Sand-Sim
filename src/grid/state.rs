@@ -31,19 +31,27 @@ impl BoardState {
     }
 
     /// Return `true` if a `hex` has one of `state`.
-    pub fn is_state(&self, hex: Hex, state: impl IntoIterator<Item = StateId>) -> bool {
+    pub fn is_state<'a>(
+        &self,
+        hex: Hex,
+        state: impl IntoIterator<Item = impl Into<StateId>>,
+    ) -> bool {
         self.get_next(hex)
-            .map(|id| state.into_iter().any(|other_id| id == &other_id))
+            .map(|id| state.into_iter().any(|other_id| *id == other_id.into()))
             .unwrap_or(false)
     }
 
-    pub fn find_state(
+    pub fn find_state<'a>(
         &self,
         hex: Hex,
-        state: impl IntoIterator<Item = StateId>,
+        state: impl IntoIterator<Item = impl Into<StateId>>,
     ) -> Option<StateId> {
-        self.get_current(hex)
-            .and_then(|id| state.into_iter().find(|other_id| id == other_id))
+        self.get_current(hex).and_then(|id| {
+            state
+                .into_iter()
+                .map(Into::into)
+                .find(|other_id| id == other_id)
+        })
     }
 
     /// Set the future state of a cell.

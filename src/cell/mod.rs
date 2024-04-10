@@ -57,6 +57,12 @@ impl From<TypeId> for StateId {
     }
 }
 
+impl<'a> Into<StateId> for &'a StateId {
+    fn into(self) -> StateId {
+        *self
+    }
+}
+
 pub struct CellEntry {
     pub behavior: Box<dyn Tick + Send + Sync>,
     pub name: Cow<'static, str>,

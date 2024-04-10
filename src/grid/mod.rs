@@ -79,9 +79,9 @@ pub fn startup_system(
         let chance: f32 = rng.gen();
         let state_id = if chance < 0.25 {
             Sand::id()
-        } else if chance < 0.50 {
+        } else if chance < 0.0 {
             Fire::id()
-        } else if chance < 0.75 {
+        } else if chance < 0.0 {
             Water::id()
         } else {
             Air::id()

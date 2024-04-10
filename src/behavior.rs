@@ -1,16 +1,16 @@
-use std::{array, fmt::Debug};
-
 use hexx::{EdgeDirection, Hex};
+use pathfinding::directed::dijkstra::dijkstra;
 use rand::seq::IteratorRandom;
+use std::{array, fmt::Debug};
 
 use crate::{
     cell::{Air, BoardSlice, Register as _, StateId},
     grid::BoardState,
 };
 
-pub trait States: IntoIterator<Item = StateId> + Debug {}
+pub trait States: IntoIterator<Item = StateId> + Clone + Debug {}
 
-impl<T> States for T where T: IntoIterator<Item = StateId> + Debug {}
+impl<T> States for T where T: IntoIterator<Item = StateId> + Clone + Debug {}
 
 pub trait Directions: IntoIterator<Item = EdgeDirection> + Debug {}
 
@@ -112,13 +112,13 @@ impl<D: Directions> Debug for Offscreen<D> {
 
 /// Convert other nearby cells into another state on collision.
 #[derive(Debug)]
-pub struct Infect<D: Directions, S: States, I: States> {
+pub struct Infect<D: Directions, O: States, I: States> {
     pub directions: D,
-    pub open: S,
+    pub open: O,
     pub into: I,
 }
 
-impl<D: Directions, S: States, I: States> Step for Infect<D, S, I> {
+impl<D: Directions, O: States, I: States> Step for Infect<D, O, I> {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         let to = hex.neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
         if states.is_state(to, self.open) {
@@ -134,13 +134,13 @@ impl<D: Directions, S: States, I: States> Step for Infect<D, S, I> {
 
 /// Drag another cell.
 #[derive(Debug)]
-pub struct Drag<D: Directions, S: States, P: States> {
-    pub directions: D,
-    pub open: S,
-    pub drag: P,
+pub struct Drag<Dir: Directions, O: States, D: States> {
+    pub directions: Dir,
+    pub open: O,
+    pub drag: D,
 }
 
-impl<D: Directions, S: States, P: States> Step for Drag<D, S, P> {
+impl<Dir: Directions, O: States, D: States> Step for Drag<Dir, O, D> {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
         let swap = RandomSwap {
             directions: self.directions,
@@ -162,7 +162,7 @@ impl<D: Directions, S: States, P: States> Step for Drag<D, S, P> {
     }
 }
 
-/// A chance for another step to occur.
+/// A chance for a step to occur.
 #[derive(Debug)]
 pub struct Chance<S: Step> {
     pub step: S,
@@ -185,7 +185,7 @@ impl<S: Step> Step for Chance<S> {
 pub struct Choose<A: Step, B: Step> {
     pub a: A,
     pub b: B,
-    /// How likely option `A` will be chosen.
+    /// How likely `a` will be chosen.
     pub chance: f32,
 }
 
@@ -200,19 +200,53 @@ impl<A: Step, B: Step> Step for Choose<A, B> {
 }
 
 impl<A: Step, B: Step> Choose<A, B> {
-    /// Evenly choose between A or B.
+    /// Evenly choose between `a` or `b`.
     pub fn half(a: A, b: B) -> Self {
         Self { a, b, chance: 0.5 }
     }
 }
 
-/// Assert the condition is true, then an empty BoardSlice is return
+/// Assert a step is applied.
+///
+/// If the step fails to apply, an empty BoardSlice is returned
+/// causing any other apply operations to succeed and truncating any
+/// other further steps. Useful for reducing testing a section of a
+/// behavior without commenting out or deleting code.
+#[derive(Debug)]
+pub struct Assert<S: Step>(pub S);
+
+impl<S: Step> Step for Assert<S> {
+    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
+        self.0
+            .apply(hex, rng, states)
+            .or_else(|| Some(BoardSlice::EMPTY))
+    }
+}
+
+/// Assert a condition is true.
+///
+/// If the condition returns false, an empty BoardSlice is returned
 /// causing any apply operations to succeed and truncating any other
 /// further steps. Useful for reducing the scope by removing
-/// conditional [`Step`]'s.
-pub struct Assert<C: FnOnce() -> bool>(pub C);
+/// conditional [`Step`]'s or debugging.
+///
+/// # Examples
+///
+/// ```
+/// // Do not execute anything after this statement
+/// AssertFn(|| false)
+/// ```
+///
+/// ```
+/// // Assert there is an Air state to the top left of the current position.
+/// AssertFn(|| states.is_state(hex.neighbor(EdgeDirection::POINTY_TOP_LEFT), &[Air::id()]))
+/// ```
+pub struct AssertFn<C: FnOnce() -> bool>(
+    /// The condition to assert.
+    pub C,
+);
 
-impl<C: FnOnce() -> bool> Step for Assert<C> {
+impl<C: FnOnce() -> bool> Step for AssertFn<C> {
     fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, _states: &BoardState) -> Option<BoardSlice> {
         if self.0() {
             None
@@ -222,7 +256,7 @@ impl<C: FnOnce() -> bool> Step for Assert<C> {
     }
 }
 
-impl<C: FnOnce() -> bool> Debug for Assert<C> {
+impl<C: FnOnce() -> bool> Debug for AssertFn<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Assert")
     }
@@ -251,33 +285,39 @@ impl<'a> Step for Message<'a> {
     }
 }
 
-/// Apply `then` [`Step`] only if there is a cell of any provided
-/// states nearby.
+/// Apply `then` [`Step`] only if all the `nearby` states are within
+/// `range` of `count` each.
 #[derive(Debug)]
-pub struct WhenNearby<N: States, S: Step> {
+pub struct Nearby<N: States, S: Step> {
     pub nearby: N,
     pub range: u32,
     pub count: usize,
     pub then: S,
 }
 
-impl<N: States, S: Step> Step for WhenNearby<N, S> {
+impl<N: States, S: Step> Step for Nearby<N, S> {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
-        for state in self.nearby {
+        let mut satisfied = 0;
+        for state in self.nearby.clone() {
             if hex
                 .xrange(self.range)
                 .filter(|hex| states.is_state(*hex, state))
                 .count()
                 >= self.count
             {
-                return self.then.apply(hex, rng, states);
+                satisfied += 1;
             }
         }
-        None
+        let count = self.nearby.into_iter().count();
+        if satisfied == count {
+            self.then.apply(hex, rng, states)
+        } else {
+            None
+        }
     }
 }
 
-impl<N: States, S: Step> WhenNearby<N, S> {
+impl<N: States, S: Step> Nearby<N, S> {
     pub fn any_adjacent(nearby: N, then: S) -> Self {
         Self {
             nearby,
@@ -402,19 +442,19 @@ where
 
 /// Try to swap with another cell `with_state` in some random `direction`.
 #[derive(Debug)]
-pub struct RandomSwap<D: Directions, S: States> {
+pub struct RandomSwap<D: Directions, O: States> {
     pub directions: D,
-    pub open: S,
+    pub open: O,
 }
 
-impl<D: Directions, S: States> Step for RandomSwap<D, S> {
+impl<D: Directions, O: States> Step for RandomSwap<D, O> {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
         let (from, to) = self.into_components(hex, rng, states)?;
         Some(BoardSlice(vec![from, to]))
     }
 }
 
-impl<D: Directions, S: States> RandomSwap<D, S> {
+impl<D: Directions, O: States> RandomSwap<D, O> {
     fn into_components(
         self,
         hex: &Hex,
@@ -465,6 +505,61 @@ impl<I: States> Step for Set<I> {
                 *hex,
                 self.0.into_iter().choose(&mut rng).unwrap(),
             )]))
+        }
+    }
+}
+
+/// Apply `then` while a path is `walkable` to `goal`.
+#[derive(Debug)]
+pub struct WhileConnected<W: States, G: States, S: Step> {
+    pub walkable: W,
+    pub goal: G,
+    pub distance: usize,
+    pub then: S,
+}
+
+impl<W: States, G: States, S: Step> Step for WhileConnected<W, G, S> {
+    fn apply<R: rand::Rng>(self, start: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
+        if let Some(_path) = dijkstra(
+            start,
+            |hex| {
+                hex.all_neighbors()
+                    // All neighbors have a weight of 1
+                    .map(|hex| (hex, 1))
+                    .into_iter()
+                    // Only on walkable states
+                    .filter(|(hex, _weight)| {
+                        states.is_state(*hex, self.walkable.clone())
+                            || states.is_state(*hex, self.goal.clone())
+                    })
+            },
+            |hex| states.is_state(*hex, self.goal.clone()),
+        ) {
+            self.then.apply(start, rng, states)
+        } else {
+            None
+        }
+    }
+}
+
+/// Check if next to a cell in a state.
+#[derive(Debug)]
+pub struct NextTo<D: Directions, N: States, S: Step> {
+    pub directions: D,
+    pub next: N,
+    pub step: S,
+}
+
+impl<D: Directions, N: States, S: Step> Step for NextTo<D, N, S> {
+    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
+        if self
+            .directions
+            .into_iter()
+            .any(|direction| states.is_state(hex.neighbor(direction), self.next.clone()))
+        {
+            self.step.apply(hex, rng, states)
+        } else {
+            None
         }
     }
 }

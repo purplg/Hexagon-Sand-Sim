@@ -31,8 +31,8 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: Water::id(),
-                into: Steam::id(),
+                open: [Water::id()],
+                into: [Steam::id()],
             },
             RandomSwap {
                 directions: [

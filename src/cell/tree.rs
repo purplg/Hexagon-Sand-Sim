@@ -5,7 +5,8 @@ use std::fmt::Debug;
 
 use super::*;
 use crate::behavior::{
-    Assert, Chance, Choose, If, Infect, RandomSwap, Set, Step, Unless, When, WhenNearby,
+    AssertFn, Chance, Choose, Infect, Nearby, NextTo, RandomSwap, Set, Step, Unless, When,
+    WhileConnected,
 };
 
 /// A particle that falls down, and when sand and water are nearby,
@@ -31,8 +32,8 @@ impl Tick for Seed {
                 open: [Air::id(), Wind::id(), Steam::id()],
             },
             // Only attempt to grow when Sand or Water are nearby.
-            WhenNearby::any_adjacent(
-                [Sand::id(), Water::id()],
+            Nearby::any_adjacent(
+                [Sand::id()],
                 Chance {
                     step: Set(Sapling::id()),
                     chance: 1.,
@@ -55,38 +56,40 @@ impl StateInfo for Sapling {
 impl Tick for Sapling {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         // Branch when no sand nearby, try to start branching
-        let height = rng.gen_range(10..100);
+        let length = rng.gen_range(10..100);
         (
-            WhenNearby::any_adjacent(
-                [Self::id()],
-                WhenNearby::any_adjacent([Sand::id(), Dead::id()], Set(Trunk::id())),
-            ),
-            If(
-                || {
-                    (states.is_state(hex.neighbor(EdgeDirection::POINTY_TOP_LEFT), Air::id())
-                        || states
-                            .is_state(hex.neighbor(EdgeDirection::POINTY_TOP_RIGHT), Air::id()))
-                        && hex
-                            .xrange(height)
-                            .any(|hex| states.is_state(hex, Sand::id()))
-                        && hex
-                            .xrange(1)
-                            .filter(|hex| states.is_state(*hex, [Self::id(), Trunk::id()]))
-                            .count()
-                            < 2
-                },
-                // Try to grow
-                Infect {
-                    directions: [
-                        EdgeDirection::POINTY_TOP_LEFT,
-                        EdgeDirection::POINTY_TOP_RIGHT,
-                    ],
-                    open: [Air::id(), Sand::id(), Water::id()],
-                    into: Self::id(),
-                },
-                // Otherwise, harden
-                Set(Trunk::id()),
-            ),
+            WhileConnected {
+                walkable: [Self::id(), Trunk::id(), Dead::id()],
+                goal: [Sand::id()],
+                distance: length,
+                then: (
+                    // If next to Sand or Dead, change to Trunk
+                    Nearby::any_adjacent(
+                        Self::id(),
+                        Nearby::any_adjacent([Sand::id(), Dead::id()], Set(Trunk::id())),
+                    ),
+                    // If next some trunks, turn into a trunk
+                    Nearby::any_adjacent([Self::id(), Trunk::id()], Set(Trunk::id())),
+                    // Otherwise, try to grow
+                    NextTo {
+                        directions: [
+                            EdgeDirection::POINTY_TOP_LEFT,
+                            EdgeDirection::POINTY_TOP_RIGHT,
+                        ],
+                        next: [Air::id()],
+                        // Try to grow
+                        step: Infect {
+                            directions: [
+                                EdgeDirection::POINTY_TOP_LEFT,
+                                EdgeDirection::POINTY_TOP_RIGHT,
+                            ],
+                            open: [Air::id(), Sand::id(), Water::id()],
+                            into: [Self::id()],
+                        },
+                    },
+                ),
+            },
+            Set(Trunk::id()),
         )
             .apply(hex, rng, states)
     }
@@ -105,7 +108,7 @@ impl StateInfo for Trunk {
 impl Tick for Trunk {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
-            WhenNearby::any(
+            Nearby::any(
                 [Sand::id(), Dead::id()],
                 5,
                 (
@@ -113,21 +116,22 @@ impl Tick for Trunk {
                         step: Set(Dead::id()),
                         chance: 0.01,
                     },
-                    Assert(|| false),
+                    AssertFn(|| false),
                 ),
             ),
+            Nearby::any([Sand::id()], 5, AssertFn(|| false)),
             Choose::half(
                 Unless(
                     || {
                         hex.xrange(4)
-                            .any(|hex| states.is_state(hex, BranchLeft::id()))
+                            .any(|hex| states.is_state(hex, [BranchLeft::id()]))
                     },
                     Set(BranchLeft::id()),
                 ),
                 Unless(
                     || {
                         hex.xrange(4)
-                            .any(|hex| states.is_state(hex, BranchRight::id()))
+                            .any(|hex| states.is_state(hex, [BranchRight::id()]))
                     },
                     Set(BranchRight::id()),
                 ),
@@ -157,7 +161,7 @@ impl Step for Branch {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
         (
             // When next to other tree components, just stop doing anything.
-            WhenNearby::some_adjacent(
+            Nearby::some_adjacent(
                 [
                     BranchLeft::id(),
                     BranchRight::id(),
@@ -169,26 +173,26 @@ impl Step for Branch {
                 Set(Dead::id()),
             ),
             // When near other branches, also stop doing anything
-            WhenNearby::any([BranchLeft::id(), BranchRight::id()], 25, Set(Dead::id())),
+            Nearby::any([BranchLeft::id(), BranchRight::id()], 25, Set(Dead::id())),
             // Otherwise, try and grow right.
-            When(
-                || states.is_state(hex.neighbor(self.direction), Air::id()),
-                Infect {
-                    directions: [self.direction],
-                    open: [
-                        Air::id(),
-                        Sand::id(),
-                        Water::id(),
-                        Sapling::id(),
-                        Seed::id(),
-                    ],
-                    into: self.grow_into,
-                },
-            ),
-            // If can't grow anymore, turn into twig.
             Choose {
-                a: Set(Twig::id()),
-                b: Set(Dead::id()),
+                // Grow
+                a: When(
+                    || states.is_state(hex.neighbor(self.direction), [Air::id()]),
+                    Infect {
+                        directions: [self.direction],
+                        open: [
+                            Air::id(),
+                            Sand::id(),
+                            Water::id(),
+                            Sapling::id(),
+                            Seed::id(),
+                        ],
+                        into: [self.grow_into],
+                    },
+                ),
+                // Chance to stop growing
+                b: Choose::half(Set(Twig::id()), Set(Dead::id())),
                 chance: 0.8,
             },
         )
@@ -255,8 +259,8 @@ impl Tick for Twig {
         Chance {
             step: Infect {
                 directions: EdgeDirection::ALL_DIRECTIONS,
-                open: Air::id(),
-                into: Leaf::id(),
+                open: [Air::id()],
+                into: [Leaf::id()],
             },
             chance: 0.1,
         }
@@ -275,30 +279,30 @@ impl StateInfo for Leaf {
 impl Tick for Leaf {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
-            WhenNearby {
-                nearby: Self::id(),
+            Nearby {
+                nearby: [Self::id()],
                 range: 20,
                 count: 50,
                 then: (
                     Chance {
                         step: Infect {
                             directions: EdgeDirection::ALL_DIRECTIONS,
-                            open: Air::id(),
-                            into: Wind::id(),
+                            open: [Air::id()],
+                            into: [Wind::id()],
                         },
                         chance: 0.01,
                     },
-                    Assert(|| false),
+                    AssertFn(|| false),
                 ),
             },
-            WhenNearby {
-                nearby: Twig::id(),
+            Nearby {
+                nearby: [Twig::id()],
                 range: 5,
                 count: 1,
                 then: Infect {
                     directions: EdgeDirection::ALL_DIRECTIONS,
-                    open: Air::id(),
-                    into: Self::id(),
+                    open: [Air::id()],
+                    into: [Self::id()],
                 },
             },
         )

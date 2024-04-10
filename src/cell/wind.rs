@@ -47,7 +47,7 @@ impl Tick for Wind {
                         EdgeDirection::POINTY_TOP_LEFT,
                     ],
                     open: [Air::id(), Self::id()],
-                    into: Self::id(),
+                    into: [Self::id()],
                 },
                 chance: 0.01,
             },

@@ -33,7 +33,7 @@ impl Tick for Water {
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
                 open: [Air::id(), Self::id()],
-                drag: Sand::id(),
+                drag: [Sand::id()],
             },
             // Move down
             RandomSwap {
@@ -41,7 +41,7 @@ impl Tick for Water {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                open: Air::id(),
+                open: [Air::id()],
             },
             // Move through thick materials
             Chance {
@@ -51,15 +51,15 @@ impl Tick for Water {
                         EdgeDirection::POINTY_TOP_LEFT,
                         EdgeDirection::POINTY_TOP_RIGHT,
                     ],
-                    open: Sand::id(),
+                    open: [Sand::id()],
                 },
             },
             // Move laterally.
             RandomSwap {
                 directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                open: Air::id(),
+                open: [Air::id()],
             },
         )
-        .apply(hex, rng, states)
+            .apply(hex, rng, states)
     }
 }
