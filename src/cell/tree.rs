@@ -33,7 +33,7 @@ impl Tick for Seed {
             },
             // Only attempt to grow when Sand or Water are nearby.
             Nearby::any_adjacent(
-                [Sand::id()],
+                [Sand::id(), Water::id()],
                 Chance {
                     step: Set(Sapling::id()),
                     chance: 1.,
