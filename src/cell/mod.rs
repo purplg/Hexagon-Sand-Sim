@@ -1,11 +1,7 @@
-use std::borrow::Cow;
-
 mod air;
 pub use air::Air;
 mod fire;
-use bevy::utils::HashMap;
-use bevy_inspector_egui::egui::util::id_type_map::TypeId;
-pub use fire::Fire;
+pub use fire::{Ember, Fire};
 mod sand;
 pub use sand::Sand;
 mod water;
@@ -19,8 +15,12 @@ pub use stone::Stone;
 mod tree;
 pub use tree::*;
 
+use std::borrow::Cow;
+
 use crate::grid::BoardState;
 use bevy::prelude::*;
+use bevy::utils::HashMap;
+use bevy_inspector_egui::egui::util::id_type_map::TypeId;
 use hexx::Hex;
 use rand::rngs::SmallRng;
 
@@ -44,6 +44,7 @@ impl bevy::prelude::Plugin for Plugin {
         registry.add(Leaf);
         registry.add(Sapling);
         registry.add(Twig);
+        registry.add(Ember);
         app.insert_resource(registry);
     }
 }

@@ -24,6 +24,23 @@ impl Tick for Fire {
                 step: Set(Air::id()),
                 chance: 0.005,
             },
+            Chance {
+                step: Infect {
+                    directions: EdgeDirection::ALL_DIRECTIONS,
+                    open: [
+                        Seed::id(),
+                        Sapling::id(),
+                        Trunk::id(),
+                        Dead::id(),
+                        BranchLeft::id(),
+                        BranchRight::id(),
+                        Twig::id(),
+                        Leaf::id(),
+                    ],
+                    into: Ember::id(),
+                },
+                chance: 0.05,
+            },
             Infect {
                 directions: [
                     EdgeDirection::POINTY_LEFT,
@@ -42,6 +59,43 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
                 open: [Air::id(), Water::id(), Sand::id()],
+            },
+        )
+            .apply(hex, rng, states)
+    }
+}
+
+pub struct Ember;
+
+impl StateInfo for Ember {
+    const NAME: &'static str = "Ember";
+    const COLOR: Color = Color::ORANGE;
+    const HIDDEN: bool = true;
+}
+
+impl Tick for Ember {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+        (
+            Chance {
+                step: Set(Air::id()),
+                chance: 0.005,
+            },
+            Chance {
+                step: Infect {
+                    directions: EdgeDirection::ALL_DIRECTIONS,
+                    open: [
+                        Seed::id(),
+                        Sapling::id(),
+                        Trunk::id(),
+                        Dead::id(),
+                        BranchLeft::id(),
+                        BranchRight::id(),
+                        Twig::id(),
+                        Leaf::id(),
+                    ],
+                    into: Self::id(),
+                },
+                chance: 0.05,
             },
         )
             .apply(hex, rng, states)
