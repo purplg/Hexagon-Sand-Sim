@@ -8,12 +8,12 @@ pub struct Fire;
 
 impl StateInfo for Fire {
     const NAME: &'static str = "Fire";
-    const COLOR: Color = Color::Rgba {
+    const COLOR: HexColor = HexColor::Static(Color::Rgba {
         red: 1.0,
         green: 0.0,
         blue: 0.0,
         alpha: 1.0,
-    };
+    });
     const HIDDEN: bool = false;
 }
 
@@ -48,8 +48,8 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [Water::id()],
-                into: [Steam::id()],
+                open: Water::id(),
+                into: Steam::id(),
             },
             RandomSwap {
                 directions: [
@@ -69,7 +69,15 @@ pub struct Ember;
 
 impl StateInfo for Ember {
     const NAME: &'static str = "Ember";
-    const COLOR: Color = Color::ORANGE;
+    const COLOR: HexColor = HexColor::Flickering {
+        base_color: Color::ORANGE,
+        offset_color: Color::Rgba {
+            red: 0.0,
+            green: 0.0,
+            blue: 0.0,
+            alpha: -1.0,
+        },
+    };
     const HIDDEN: bool = true;
 }
 
@@ -79,6 +87,11 @@ impl Tick for Ember {
             Chance {
                 step: Set(Air::id()),
                 chance: 0.005,
+            },
+            Annihilate {
+                directions: EdgeDirection::ALL_DIRECTIONS,
+                open: Water::id(),
+                into: Steam::id(),
             },
             Chance {
                 step: Infect {

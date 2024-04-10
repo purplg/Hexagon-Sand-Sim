@@ -64,10 +64,24 @@ impl<'a> Into<StateId> for &'a StateId {
     }
 }
 
+pub enum HexColor {
+    Invisible,
+    Static(Color),
+    Flickering {
+        base_color: Color,
+        offset_color: Color,
+    },
+    Noise {
+        base_color: Color,
+        offset_color: Color,
+        speed: Vec2,
+    },
+}
+
 pub struct CellEntry {
     pub behavior: Box<dyn Tick + Send + Sync>,
     pub name: Cow<'static, str>,
-    pub color: Color,
+    pub color: HexColor,
     pub hidden: bool,
 }
 
@@ -103,7 +117,7 @@ impl CellRegistry {
             .map(|(id, entry)| (*id, entry.name.to_string()))
     }
 
-    pub fn color(&self, id: &StateId) -> &Color {
+    pub fn color(&self, id: &StateId) -> &HexColor {
         self.inner
             .get(id)
             .map(|entry| &entry.color)
@@ -145,6 +159,6 @@ impl<T> Register for T where T: StateInfo + 'static {}
 /// the user.
 pub trait StateInfo {
     const NAME: &'static str = "Unknown";
-    const COLOR: Color = Color::NONE;
+    const COLOR: HexColor = HexColor::Invisible;
     const HIDDEN: bool = true;
 }

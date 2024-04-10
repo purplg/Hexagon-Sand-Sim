@@ -9,6 +9,13 @@ use crate::behavior::{
     WhileConnected,
 };
 
+const BROWN: Color = Color::Rgba {
+    red: 0.47,
+    green: 0.333,
+    blue: 0.14,
+    alpha: 1.0,
+};
+
 /// A particle that falls down, and when sand and water are nearby,
 /// turns into a [`Sapling`].
 #[derive(Debug)]
@@ -16,7 +23,7 @@ pub struct Seed;
 
 impl StateInfo for Seed {
     const NAME: &'static str = "Seed";
-    const COLOR: Color = Color::LIME_GREEN;
+    const COLOR: HexColor = HexColor::Static(Color::LIME_GREEN);
     const HIDDEN: bool = false;
 }
 
@@ -29,7 +36,7 @@ impl Tick for Seed {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                open: [Air::id(), Wind::id(), Steam::id()],
+                open: [Air::id(), Wind::id(), Steam::id(), Water::id()],
             },
             // Only attempt to grow when Sand or Water are nearby.
             Nearby::any_adjacent(
@@ -50,7 +57,7 @@ pub struct Sapling;
 
 impl StateInfo for Sapling {
     const NAME: &'static str = "Sapling";
-    const COLOR: Color = Color::DARK_GREEN;
+    const COLOR: HexColor = HexColor::Static(Color::DARK_GREEN);
 }
 
 impl Tick for Sapling {
@@ -84,7 +91,7 @@ impl Tick for Sapling {
                                 EdgeDirection::POINTY_TOP_RIGHT,
                             ],
                             open: [Air::id(), Sand::id(), Water::id()],
-                            into: [Self::id()],
+                            into: Self::id(),
                         },
                     },
                 ),
@@ -102,7 +109,7 @@ pub struct Trunk;
 
 impl StateInfo for Trunk {
     const NAME: &'static str = "Trunk";
-    const COLOR: Color = Color::DARK_GRAY;
+    const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
 impl Tick for Trunk {
@@ -146,7 +153,7 @@ pub struct Dead;
 
 impl StateInfo for Dead {
     const NAME: &'static str = "Dead";
-    const COLOR: Color = Color::TURQUOISE;
+    const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
 impl Tick for Dead {}
@@ -205,12 +212,7 @@ pub struct BranchLeft;
 
 impl StateInfo for BranchLeft {
     const NAME: &'static str = "BranchLeft";
-    const COLOR: Color = Color::Rgba {
-        red: 1.0,
-        green: 0.5,
-        blue: 1.0,
-        alpha: 1.0,
-    };
+    const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
 impl Tick for BranchLeft {
@@ -228,12 +230,7 @@ pub struct BranchRight;
 
 impl StateInfo for BranchRight {
     const NAME: &'static str = "BranchRight";
-    const COLOR: Color = Color::Rgba {
-        red: 1.0,
-        green: 0.0,
-        blue: 1.0,
-        alpha: 1.0,
-    };
+    const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
 impl Tick for BranchRight {
@@ -251,7 +248,7 @@ pub struct Twig;
 
 impl StateInfo for Twig {
     const NAME: &'static str = "Twig";
-    const COLOR: Color = Color::PINK;
+    const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
 impl Tick for Twig {
@@ -273,39 +270,45 @@ pub struct Leaf;
 
 impl StateInfo for Leaf {
     const NAME: &'static str = "Leaf";
-    const COLOR: Color = Color::GREEN;
+    const COLOR: HexColor = HexColor::Static(Color::GREEN);
 }
 
 impl Tick for Leaf {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        (
-            Nearby {
-                nearby: [Self::id()],
-                range: 20,
-                count: 50,
-                then: (
-                    Chance {
-                        step: Infect {
-                            directions: EdgeDirection::ALL_DIRECTIONS,
-                            open: [Air::id()],
-                            into: [Wind::id()],
+        let length = 30;
+        WhileConnected {
+            walkable: [Self::id(), Trunk::id(), Dead::id()],
+            goal: [Sand::id()],
+            distance: length,
+            then: (
+                Nearby {
+                    nearby: [Self::id()],
+                    range: 20,
+                    count: 50,
+                    then: (
+                        Chance {
+                            step: Infect {
+                                directions: EdgeDirection::ALL_DIRECTIONS,
+                                open: [Air::id()],
+                                into: [Wind::id()],
+                            },
+                            chance: 0.01,
                         },
-                        chance: 0.01,
-                    },
-                    AssertFn(|| false),
-                ),
-            },
-            Nearby {
-                nearby: [Twig::id()],
-                range: 5,
-                count: 1,
-                then: Infect {
-                    directions: EdgeDirection::ALL_DIRECTIONS,
-                    open: [Air::id()],
-                    into: [Self::id()],
+                        AssertFn(|| false),
+                    ),
                 },
-            },
-        )
-            .apply(hex, rng, states)
+                Nearby {
+                    nearby: [Twig::id()],
+                    range: 5,
+                    count: 1,
+                    then: Infect {
+                        directions: EdgeDirection::ALL_DIRECTIONS,
+                        open: [Air::id()],
+                        into: [Self::id()],
+                    },
+                },
+            ),
+        }
+        .apply(hex, rng, states)
     }
 }

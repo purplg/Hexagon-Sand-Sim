@@ -8,12 +8,12 @@ pub struct Steam;
 
 impl StateInfo for Steam {
     const NAME: &'static str = "Steam";
-    const COLOR: Color = Color::Rgba {
+    const COLOR: HexColor = HexColor::Static(Color::Rgba {
         red: 1.0,
         green: 1.0,
         blue: 1.0,
         alpha: 0.5,
-    };
+    });
     const HIDDEN: bool = false;
 }
 

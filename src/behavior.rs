@@ -132,6 +132,26 @@ impl<D: Directions, O: States, I: States> Step for Infect<D, O, I> {
     }
 }
 
+/// Like [`Infect`], except both cells turn into the same state.
+#[derive(Debug)]
+pub struct Annihilate<D: Directions, O: States, I: States> {
+    pub directions: D,
+    pub open: O,
+    pub into: I,
+}
+
+impl<D: Directions, O: States, I: States> Step for Annihilate<D, O, I> {
+    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
+        let to = hex.neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
+        if states.is_state(to, self.open) {
+            let id = self.into.into_iter().choose(&mut rng).unwrap();
+            Some(BoardSlice(vec![(*hex, id), (to, id)]))
+        } else {
+            None
+        }
+    }
+}
+
 /// Drag another cell.
 #[derive(Debug)]
 pub struct Drag<Dir: Directions, O: States, D: States> {

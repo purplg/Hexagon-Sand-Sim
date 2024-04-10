@@ -1,5 +1,3 @@
-use bevy::prelude::*;
-
 use super::*;
 use crate::behavior::*;
 
@@ -7,7 +5,7 @@ pub struct Air;
 
 impl StateInfo for Air {
     const NAME: &'static str = "Air";
-    const COLOR: Color = Color::NONE;
+    const COLOR: HexColor = HexColor::Invisible;
     const HIDDEN: bool = false;
 }
 

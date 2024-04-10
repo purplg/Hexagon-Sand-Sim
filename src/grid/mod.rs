@@ -6,11 +6,12 @@ use std::{
 };
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
+use noisy_bevy::simplex_noise_2d;
 use rand::Rng;
 pub use state::{Board, BoardState};
 
 use crate::{cell::*, input::Input, rng::RngSource, ui::Palette};
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{math::vec2, prelude::*, window::PrimaryWindow};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
 
@@ -217,6 +218,8 @@ fn render_system(
     board: Res<Board>,
     states: Res<BoardState>,
     registry: Res<CellRegistry>,
+    mut rng: ResMut<RngSource>,
+    time: Res<Time>,
 ) {
     // HACK Why 0.7? I don't know but it lines up...
     let size = board.layout.hex_size.length() * 0.7;
@@ -226,7 +229,36 @@ fn render_system(
             RegularPolygon::new(size, 6),
             board.layout.hex_to_world_pos(*hex),
             0.0,
-            *registry.color(id),
+            match *registry.color(id) {
+                HexColor::Invisible => Color::NONE,
+                HexColor::Static(color) => color,
+                HexColor::Flickering {
+                    base_color,
+                    offset_color,
+                } => Color::Rgba {
+                    red: base_color.r() + rng.gen::<f32>() * offset_color.r(),
+                    green: base_color.g() + rng.gen::<f32>() * offset_color.g(),
+                    blue: base_color.b() + rng.gen::<f32>() * offset_color.b(),
+                    alpha: base_color.a() + rng.gen::<f32>() * offset_color.a(),
+                },
+                HexColor::Noise {
+                    base_color,
+                    offset_color,
+                    speed,
+                } => {
+                    let world_pos = board.layout.hex_to_world_pos(*hex);
+                    let pos = vec2(
+                        world_pos.x + time.elapsed_seconds() * speed.x,
+                        world_pos.y + time.elapsed_seconds() * speed.y,
+                    );
+                    Color::Rgba {
+                        red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
+                        green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
+                        blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
+                        alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
+                    }
+                }
+            },
         );
     }
 }

@@ -8,11 +8,15 @@ pub struct Sand;
 
 impl StateInfo for Sand {
     const NAME: &'static str = "Sand";
-    const COLOR: Color = Color::Rgba {
-        red: 1.0,
-        green: 1.0,
-        blue: 0.0,
-        alpha: 1.0,
+    const COLOR: HexColor = HexColor::Noise {
+        base_color: Color::YELLOW,
+        offset_color: Color::Rgba {
+            red: 0.2,
+            green: 0.2,
+            blue: 0.2,
+            alpha: 0.0,
+        },
+        speed: Vec2::ZERO,
     };
     const HIDDEN: bool = false;
 }

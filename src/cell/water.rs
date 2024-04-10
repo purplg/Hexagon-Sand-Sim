@@ -8,11 +8,20 @@ pub struct Water;
 
 impl StateInfo for Water {
     const NAME: &'static str = "Water";
-    const COLOR: Color = Color::Rgba {
-        red: 0.0,
-        green: 0.0,
-        blue: 1.0,
-        alpha: 1.0,
+    const COLOR: HexColor = HexColor::Noise {
+        base_color: Color::Rgba {
+            red: 0.0,
+            green: 0.0,
+            blue: 1.0,
+            alpha: 1.0,
+        },
+        offset_color: Color::Rgba {
+            red: 0.0,
+            green: 0.0,
+            blue: 0.5,
+            alpha: -1.0,
+        },
+        speed: Vec2::X,
     };
     const HIDDEN: bool = false;
 }
