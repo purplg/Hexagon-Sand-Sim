@@ -94,9 +94,13 @@ impl Step for Noop {
 pub struct Offscreen<D: Directions>(pub D);
 
 impl<D: Directions> Step for Offscreen<D> {
-    fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
-        let to = hex.neighbor(self.0.into_iter().choose(&mut rng).unwrap());
-        if states.get_current(to).is_none() {
+    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
+        if self
+            .0
+            .into_iter()
+            .map(|direction| hex.neighbor(direction))
+            .any(|hex| states.get_current(hex).is_none())
+        {
             Set(Air::id()).apply(hex, rng, states)
         } else {
             None
