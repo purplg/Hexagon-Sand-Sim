@@ -78,12 +78,6 @@ impl<A: Step, B: Step, C: Step, D: Step, E: Step> Step for (A, B, C, D, E) {
     }
 }
 
-impl Step for Option<BoardSlice> {
-    fn apply<R: rand::Rng>(self, _hex: &Hex, _rng: R, _states: &BoardState) -> Option<BoardSlice> {
-        self
-    }
-}
-
 /// Do nothing.
 ///
 /// Useful as a placeholder for another [`Step`] while writing a
