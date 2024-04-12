@@ -45,6 +45,7 @@ impl<A: Step, B: Step> Step for (A, B) {
     }
 }
 
+/// Try first step and if it fails, then try second, and so on...
 impl<A: Step, B: Step, C: Step> Step for (A, B, C) {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
@@ -54,6 +55,7 @@ impl<A: Step, B: Step, C: Step> Step for (A, B, C) {
     }
 }
 
+/// Try first step and if it fails, then try second, and so on...
 impl<A: Step, B: Step, C: Step, D: Step> Step for (A, B, C, D) {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
@@ -64,6 +66,7 @@ impl<A: Step, B: Step, C: Step, D: Step> Step for (A, B, C, D) {
     }
 }
 
+/// Try first step and if it fails, then try second, and so on...
 impl<A: Step, B: Step, C: Step, D: Step, E: Step> Step for (A, B, C, D, E) {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         self.0
@@ -81,6 +84,10 @@ impl Step for Option<BoardSlice> {
     }
 }
 
+/// Do nothing.
+///
+/// Useful as a placeholder for another [`Step`] while writing a
+/// cells' behavior.
 #[derive(Debug)]
 pub struct Noop;
 
@@ -91,6 +98,9 @@ impl Step for Noop {
 }
 
 /// Fall off the screen.
+///
+/// If this cell on touching the edge of a screen in any of the
+/// specified direction, then it turns to an [`Air`] state.
 pub struct Offscreen<D: Directions>(pub D);
 
 impl<D: Directions> Step for Offscreen<D> {
