@@ -18,7 +18,7 @@ impl StateInfo for Fire {
 }
 
 impl Tick for Fire {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             Chance {
                 step: Set(Air::id()),
@@ -82,7 +82,7 @@ impl StateInfo for Ember {
 }
 
 impl Tick for Ember {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             Chance {
                 step: Set(Air::id()),

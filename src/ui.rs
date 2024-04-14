@@ -14,7 +14,7 @@ use bevy_inspector_egui::{
 
 use crate::{
     cell::*,
-    grid::{self, Board, BoardState, SimState, TickRate},
+    grid::{self, BoardState, SimState, TickRate},
 };
 
 static EMPTY_NAME: Cow<'static, str> = Cow::Owned(String::new());
@@ -62,11 +62,12 @@ fn update_system(world: &mut World) {
             }
         });
 
-        ui.add_space(16.);
-        ui.push_id(Id::from("Board"), |ui| {
-            ui.heading("Board");
-            bevy_inspector::ui_for_resource::<Board>(world, ui);
-        });
+        // TODO
+        // ui.add_space(16.);
+        // ui.push_id(Id::from("Board"), |ui| {
+        //     ui.heading("Board");
+        //     bevy_inspector::ui_for_resource::<Board>(world, ui);
+        // });
 
         ui.add_space(16.);
         ui.push_id(Id::from("control"), |ui| {
@@ -76,9 +77,8 @@ fn update_system(world: &mut World) {
                     world.run_system_once(grid::startup_system);
                 }
                 if ui.button("Clear").clicked() {
-                    let mut states = world.resource_mut::<BoardState>();
-                    states.current.clear();
-                    states.next.clear();
+                    let mut states = world.resource_mut::<BoardState<64>>();
+                    states.clear();
                 }
             });
         });
@@ -103,9 +103,8 @@ fn update_system(world: &mut World) {
 struct Tooltip(Cow<'static, str>);
 
 fn tooltip_system(
-    states: Res<BoardState>,
+    states: Res<BoardState<64>>,
     registry: Res<CellRegistry>,
-    board: Res<Board>,
     mut tooltip: ResMut<Tooltip>,
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
@@ -120,11 +119,11 @@ fn tooltip_system(
         return;
     };
 
-    let hex = board.layout.world_pos_to_hex(world_position);
+    let hex = states.layout().world_pos_to_hex(world_position);
     if let Some(entry) = states.get_current(hex).and_then(|id| registry.get(id)) {
         tooltip.0.clone_from(&entry.name);
     } else {
-        tooltip.0.clone_from(&EMPTY_NAME) ;
+        tooltip.0.clone_from(&EMPTY_NAME);
     }
 }
 

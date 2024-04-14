@@ -18,7 +18,7 @@ impl StateInfo for Wind {
 }
 
 impl Tick for Wind {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             // Dissipate
             Chance {

@@ -10,7 +10,7 @@ impl StateInfo for Air {
 }
 
 impl Tick for Air {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
             step: Set(Self::id()),
             chance: 0.0001,

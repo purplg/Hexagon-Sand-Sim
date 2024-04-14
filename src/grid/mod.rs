@@ -8,7 +8,7 @@ use std::{
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use noisy_bevy::simplex_noise_2d;
 use rand::Rng;
-pub use state::{Board, BoardState};
+pub use state::BoardState;
 
 use crate::{cell::*, input::Input, rng::RngSource, ui::Palette};
 use bevy::{math::vec2, prelude::*, window::PrimaryWindow};
@@ -20,15 +20,7 @@ pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         // Adjust the size and layout of the board.
-        app.insert_resource(Board {
-            layout: HexLayout {
-                orientation: HexOrientation::Pointy,
-                hex_size: Vec2::ONE * 2.0,
-                ..default()
-            },
-            bounds: HexBounds::from_radius(64),
-        });
-        app.init_resource::<BoardState>();
+        app.init_resource::<BoardState<64>>();
         app.insert_resource(TickRate::new(Duration::from_millis(15)));
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
@@ -69,14 +61,9 @@ impl SimState {
 struct TickEvent;
 
 /// Generate a fresh board.
-pub fn startup_system(
-    board: Res<Board>,
-    mut states: ResMut<BoardState>,
-    mut rng: ResMut<RngSource>,
-) {
-    states.current.clear();
-    states.next.clear();
-    for hex in board.bounds.all_coords() {
+pub fn startup_system(mut states: ResMut<BoardState<64>>, mut rng: ResMut<RngSource>) {
+    states.clear();
+    for hex in states.bounds().all_coords() {
         let chance: f32 = rng.gen();
         let state_id = if chance < 0.25 {
             Sand::id()
@@ -87,7 +74,7 @@ pub fn startup_system(
         } else {
             Air::id()
         };
-        states.set(hex, state_id);
+        states.set_next(hex, state_id);
     }
     states.tick();
 }
@@ -149,15 +136,14 @@ fn tick_system(
 
 /// System to run the simulation every frame.
 fn sim_system(
-    mut states: ResMut<BoardState>,
+    mut states: ResMut<BoardState<64>>,
     registry: Res<CellRegistry>,
     mut rng: ResMut<RngSource>,
 ) {
     let slices = states
-        .current
         .iter()
         .filter_map(|(hex, id)| registry.get(id).map(|tickable| (hex, tickable)))
-        .filter_map(|(hex, cell)| cell.behavior.tick(hex, &states, &mut rng))
+        .filter_map(|(hex, cell)| cell.behavior.tick(&hex, &states, &mut rng))
         .collect::<Vec<_>>();
     for slice in slices {
         states.apply(slice);
@@ -165,7 +151,7 @@ fn sim_system(
 }
 
 /// Move all the queued states into the current state.
-fn flush_system(mut states: ResMut<BoardState>) {
+fn flush_system(mut states: ResMut<BoardState<64>>) {
     states.tick();
 }
 
@@ -175,8 +161,7 @@ fn control_system(
     query: Query<&ActionState<Input>>,
     mut tick_event: EventWriter<TickEvent>,
     mut rate: ResMut<TickRate>,
-    board: Res<Board>,
-    mut states: ResMut<BoardState>,
+    mut states: ResMut<BoardState<64>>,
     palette: Res<Palette>,
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
@@ -202,10 +187,10 @@ fn control_system(
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
             .map(|ray| ray.origin.truncate())
         {
-            let hex = board.layout.world_pos_to_hex(world_position);
+            let hex = states.layout().world_pos_to_hex(world_position);
             for hex in hex.rings(0..palette.brush_size).flatten() {
-                if board.bounds.is_in_bounds(hex) {
-                    states.set(hex, palette.selected);
+                if states.bounds().is_in_bounds(hex) {
+                    states.set_next(hex, palette.selected);
                 }
             }
         }
@@ -215,19 +200,20 @@ fn control_system(
 /// System to render the cells on the board... using Gizmos!
 fn render_system(
     mut draw: Gizmos,
-    board: Res<Board>,
-    states: Res<BoardState>,
+    states: Res<BoardState<64>>,
     registry: Res<CellRegistry>,
     mut rng: ResMut<RngSource>,
     time: Res<Time>,
-) {
+) where
+    [(); Hex::range_count(64) as usize]: Sized,
+{
     // HACK Why 0.7? I don't know but it lines up...
-    let size = board.layout.hex_size.length() * 0.7;
+    let size = states.layout().hex_size.length() * 0.7;
 
-    for (hex, id) in states.current.iter() {
+    for (hex, id) in states.iter() {
         draw.primitive_2d(
             RegularPolygon::new(size, 6),
-            board.layout.hex_to_world_pos(*hex),
+            states.layout().hex_to_world_pos(hex),
             0.0,
             match *registry.color(id) {
                 HexColor::Invisible => Color::NONE,
@@ -246,7 +232,7 @@ fn render_system(
                     offset_color,
                     speed,
                 } => {
-                    let world_pos = board.layout.hex_to_world_pos(*hex);
+                    let world_pos = states.layout().hex_to_world_pos(hex);
                     let pos = vec2(
                         world_pos.x + time.elapsed_seconds() * speed.x,
                         world_pos.y + time.elapsed_seconds() * speed.y,

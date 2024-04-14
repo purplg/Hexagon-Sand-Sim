@@ -1,27 +1,65 @@
 use bevy::{prelude::*, utils::HashMap};
-use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use hexx::*;
 
 use crate::cell::{BoardSlice, StateId};
+
+use super::{Air, Register};
 
 /// Lookup Entity IDs from their position on the board.
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct EntityMap(HashMap<Hex, Entity>);
 
 /// The state of the board.
-#[derive(Resource, Default)]
-pub struct BoardState {
+#[derive(Resource)]
+pub struct BoardState<const RANGE: u32>
+where
+    [(); Hex::range_count(RANGE) as usize]:,
+{
+    bounds: HexBounds,
+    layout: HexLayout,
+
     /// The visible state of the board.
-    pub current: HashMap<Hex, StateId>,
+    current: [StateId; Hex::range_count(RANGE) as usize],
 
     /// The delta for the next frame to be applied when [`Self::tick()`] is called.
-    pub next: HashMap<Hex, StateId>,
+    next: HashMap<Hex, StateId>,
 }
 
-impl BoardState {
+impl<const RANGE: u32> BoardState<RANGE>
+where
+    [(); Hex::range_count(RANGE) as usize]:,
+{
+    pub fn bounds(&self) -> &HexBounds {
+        &self.bounds
+    }
+
+    pub fn layout(&self) -> &HexLayout {
+        &self.layout
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Hex, &StateId)> {
+        self.current
+            .iter()
+            .enumerate()
+            .map(|(i, id)| (Self::index_to_hex(i), id))
+    }
+
     /// Get the [`StateId`] currently visible in a cell.
     pub fn get_current(&self, hex: impl Into<Hex>) -> Option<&StateId> {
-        self.current.get(&hex.into())
+        let hex = hex.into();
+        if self.bounds.is_in_bounds(hex) {
+            self.current.get(Self::hex_to_index(&hex))
+        } else {
+            None
+        }
+    }
+
+    fn index_to_hex(i: usize) -> Hex {
+        Hex::from_hexmod_coordinates(i as u32, RANGE)
+    }
+
+    fn hex_to_index(hex: &Hex) -> usize {
+        hex.to_hexmod_coordinates(RANGE) as usize
     }
 
     /// Get the future [`StateId`] of a cell.
@@ -55,7 +93,7 @@ impl BoardState {
     }
 
     /// Set the future state of a cell.
-    pub fn set(&mut self, hex: Hex, id: StateId) {
+    pub fn set_next(&mut self, hex: Hex, id: StateId) {
         self.next.insert(hex, id);
     }
 
@@ -79,24 +117,31 @@ impl BoardState {
     /// Apply all changes in [`Self::next`] to [`Self::current`].
     pub(super) fn tick(&mut self) {
         for (hex, id) in self.next.drain() {
-            self.current.insert(hex, id);
+            let i = Self::hex_to_index(&hex);
+            self.current[i] = id;
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.current = [Air::id(); Hex::range_count(RANGE) as usize];
+        self.next.clear();
     }
 }
 
-/// The size and layout of the board.
-#[derive(Reflect, Resource, InspectorOptions)]
-#[reflect(Resource, InspectorOptions)]
-pub struct Board {
-    pub layout: HexLayout,
-    pub bounds: HexBounds,
-}
-
-impl Default for Board {
+impl<const RANGE: u32> Default for BoardState<RANGE>
+where
+    [(); Hex::range_count(RANGE) as usize]:,
+{
     fn default() -> Self {
         Self {
-            layout: Default::default(),
-            bounds: HexBounds::new(Hex::default(), 0),
+            bounds: HexBounds::new(Hex::default(), RANGE),
+            layout: HexLayout {
+                orientation: HexOrientation::Pointy,
+                hex_size: Vec2::ONE * 2.0,
+                ..default()
+            },
+            current: [Air::id(); Hex::range_count(RANGE) as usize],
+            next: Default::default(),
         }
     }
 }

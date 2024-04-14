@@ -1,3 +1,5 @@
+#![feature(generic_const_exprs)]
+
 pub mod behavior;
 mod camera;
 mod cell;

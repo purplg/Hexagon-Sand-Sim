@@ -18,7 +18,7 @@ impl StateInfo for Steam {
 }
 
 impl Tick for Steam {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             // Condense
             Chance {

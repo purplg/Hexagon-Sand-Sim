@@ -28,7 +28,7 @@ impl StateInfo for Seed {
 }
 
 impl Tick for Seed {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             // Move down
             RandomSwap {
@@ -61,7 +61,7 @@ impl StateInfo for Sapling {
 }
 
 impl Tick for Sapling {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         // Branch when no sand nearby, try to start branching
         let length = rng.gen_range(10..100);
         (
@@ -113,7 +113,7 @@ impl StateInfo for Trunk {
 }
 
 impl Tick for Trunk {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             Nearby::any(
                 [Sand::id(), Dead::id()],
@@ -165,7 +165,7 @@ struct Branch {
 }
 
 impl Step for Branch {
-    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
+    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState<64>) -> Option<BoardSlice> {
         (
             // When next to other tree components, just stop doing anything.
             Nearby::some_adjacent(
@@ -216,7 +216,7 @@ impl StateInfo for BranchLeft {
 }
 
 impl Tick for BranchLeft {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         Branch {
             direction: EdgeDirection::POINTY_TOP_LEFT,
             grow_into: Self::id(),
@@ -234,7 +234,7 @@ impl StateInfo for BranchRight {
 }
 
 impl Tick for BranchRight {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         Branch {
             direction: EdgeDirection::POINTY_TOP_RIGHT,
             grow_into: Self::id(),
@@ -252,7 +252,7 @@ impl StateInfo for Twig {
 }
 
 impl Tick for Twig {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
             step: Infect {
                 directions: EdgeDirection::ALL_DIRECTIONS,
@@ -274,7 +274,7 @@ impl StateInfo for Leaf {
 }
 
 impl Tick for Leaf {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
         let length = 30;
         WhileConnected {
             walkable: [Self::id(), Trunk::id(), Dead::id()],
