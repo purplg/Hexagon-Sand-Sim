@@ -4,6 +4,8 @@ use hexx::EdgeDirection;
 use super::*;
 use crate::behavior::*;
 
+#[derive(UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Sand;
 
 impl StateInfo for Sand {
@@ -22,7 +24,7 @@ impl StateInfo for Sand {
 }
 
 impl Tick for Sand {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         RandomSwap {
             directions: [
                 EdgeDirection::POINTY_BOTTOM_LEFT,

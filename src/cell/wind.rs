@@ -4,6 +4,8 @@ use hexx::EdgeDirection;
 use super::*;
 use crate::behavior::*;
 
+#[derive(UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Wind;
 
 impl StateInfo for Wind {
@@ -18,11 +20,11 @@ impl StateInfo for Wind {
 }
 
 impl Tick for Wind {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             // Dissipate
             Chance {
-                step: Set(Air::id()),
+                step: Set([Air::id()]),
                 chance: 0.01,
             },
             Offscreen([

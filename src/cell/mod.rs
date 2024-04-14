@@ -5,6 +5,7 @@ pub use fire::{Ember, Fire};
 mod sand;
 pub use sand::Sand;
 mod water;
+use unique_type_id::UniqueTypeId;
 pub use water::Water;
 mod steam;
 pub use steam::Steam;
@@ -17,10 +18,10 @@ pub use tree::*;
 
 use std::borrow::Cow;
 
+use crate::behavior::StateId;
 use crate::grid::BoardState;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
-use bevy_inspector_egui::egui::util::id_type_map::TypeId;
 use hexx::Hex;
 use rand::rngs::SmallRng;
 
@@ -46,21 +47,6 @@ impl bevy::prelude::Plugin for Plugin {
         registry.add(Twig);
         registry.add(Ember);
         app.insert_resource(registry);
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct StateId(TypeId);
-
-impl From<TypeId> for StateId {
-    fn from(value: TypeId) -> Self {
-        Self(value)
-    }
-}
-
-impl<'a> Into<StateId> for &'a StateId {
-    fn into(self) -> StateId {
-        *self
     }
 }
 
@@ -93,9 +79,9 @@ pub struct CellRegistry {
 impl CellRegistry {
     pub fn add<T>(&mut self, tickable: T)
     where
-        T: StateInfo + Register + Tick + Send + Sync + 'static,
+        T: StateInfo + Tick + Send + Sync + 'static,
     {
-        let id: StateId = TypeId::of::<T>().into();
+        let id: StateId = T::id();
         if self.inner.contains_key(&id) {
             panic!("StateId::{:?} already exists in Tick registry.", id);
         }
@@ -136,33 +122,16 @@ pub trait Tick {
     fn tick(
         &self,
         _from: &Hex,
-        _states: &BoardState<64>,
+        _states: &BoardState,
         _rng: &mut SmallRng,
     ) -> Option<BoardSlice> {
         None
     }
 }
 
-impl From<StateId> for Vec<StateId> {
-    fn from(value: StateId) -> Self {
-        vec![value]
-    }
-}
-
-pub trait Register
-where
-    Self: Sized + 'static,
-{
-    fn id() -> StateId {
-        StateId(TypeId::of::<Self>())
-    }
-}
-
-impl<T> Register for T where T: StateInfo + 'static {}
-
 /// Meta information about a state type generally for displaying to
 /// the user.
-pub trait StateInfo {
+pub trait StateInfo: UniqueTypeId<u32> {
     const NAME: &'static str = "Unknown";
     const COLOR: HexColor = HexColor::Invisible;
     const HIDDEN: bool = true;

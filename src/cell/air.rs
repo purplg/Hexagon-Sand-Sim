@@ -1,6 +1,10 @@
+use unique_type_id::UniqueTypeId;
+
 use super::*;
 use crate::behavior::*;
 
+#[derive(UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Air;
 
 impl StateInfo for Air {
@@ -10,9 +14,9 @@ impl StateInfo for Air {
 }
 
 impl Tick for Air {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
-            step: Set(Self::id()),
+            step: Set([Self::id()]),
             chance: 0.0001,
         }
         .apply(hex, rng, states)

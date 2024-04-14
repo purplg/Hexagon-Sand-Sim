@@ -4,6 +4,8 @@ use hexx::EdgeDirection;
 use super::*;
 use crate::behavior::*;
 
+#[derive(UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Fire;
 
 impl StateInfo for Fire {
@@ -18,10 +20,10 @@ impl StateInfo for Fire {
 }
 
 impl Tick for Fire {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             Chance {
-                step: Set(Air::id()),
+                step: Set([Air::id()]),
                 chance: 0.005,
             },
             Chance {
@@ -37,7 +39,7 @@ impl Tick for Fire {
                         Twig::id(),
                         Leaf::id(),
                     ],
-                    into: Ember::id(),
+                    into: [Ember::id()],
                 },
                 chance: 0.05,
             },
@@ -48,8 +50,8 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: Water::id(),
-                into: Steam::id(),
+                open: [Water::id()],
+                into: [Steam::id()],
             },
             RandomSwap {
                 directions: [
@@ -65,6 +67,8 @@ impl Tick for Fire {
     }
 }
 
+#[derive(UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Ember;
 
 impl StateInfo for Ember {
@@ -82,16 +86,16 @@ impl StateInfo for Ember {
 }
 
 impl Tick for Ember {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             Chance {
-                step: Set(Air::id()),
+                step: Set([Air::id()]),
                 chance: 0.005,
             },
             Annihilate {
                 directions: EdgeDirection::ALL_DIRECTIONS,
-                open: Water::id(),
-                into: Steam::id(),
+                open: [Water::id()],
+                into: [Steam::id()],
             },
             Chance {
                 step: Infect {
@@ -106,7 +110,7 @@ impl Tick for Ember {
                         Twig::id(),
                         Leaf::id(),
                     ],
-                    into: Self::id(),
+                    into: [Self::id()],
                 },
                 chance: 0.05,
             },

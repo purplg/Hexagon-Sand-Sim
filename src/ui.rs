@@ -11,8 +11,10 @@ use bevy_inspector_egui::{
     inspector_options::ReflectInspectorOptions,
     DefaultInspectorConfigPlugin, InspectorOptions,
 };
+use unique_type_id::UniqueTypeId as _;
 
 use crate::{
+    behavior::StateId,
     cell::*,
     grid::{self, BoardState, SimState, TickRate},
 };
@@ -77,7 +79,7 @@ fn update_system(world: &mut World) {
                     world.run_system_once(grid::startup_system);
                 }
                 if ui.button("Clear").clicked() {
-                    let mut states = world.resource_mut::<BoardState<64>>();
+                    let mut states = world.resource_mut::<BoardState>();
                     states.clear();
                 }
             });
@@ -103,7 +105,7 @@ fn update_system(world: &mut World) {
 struct Tooltip(Cow<'static, str>);
 
 fn tooltip_system(
-    states: Res<BoardState<64>>,
+    states: Res<BoardState>,
     registry: Res<CellRegistry>,
     mut tooltip: ResMut<Tooltip>,
     camera: Query<(&Camera, &GlobalTransform)>,

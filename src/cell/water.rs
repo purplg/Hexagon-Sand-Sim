@@ -1,9 +1,12 @@
 use bevy::prelude::*;
 use hexx::EdgeDirection;
+use unique_type_id::UniqueTypeId;
 
 use super::*;
 use crate::behavior::*;
 
+#[derive(UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Water;
 
 impl StateInfo for Water {
@@ -26,11 +29,11 @@ impl StateInfo for Water {
     const HIDDEN: bool = false;
 }
 impl Tick for Water {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             // Evaporate
             Chance {
-                step: Set(Steam::id()),
+                step: Set([Steam::id()]),
                 chance: 0.0001,
             },
             // Drag sand

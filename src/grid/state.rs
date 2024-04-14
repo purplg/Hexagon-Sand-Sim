@@ -1,34 +1,32 @@
 use bevy::{prelude::*, utils::HashMap};
 use hexx::*;
+use unique_type_id::UniqueTypeId as _;
 
-use crate::cell::{BoardSlice, StateId};
+use crate::{behavior::StateId, cell::BoardSlice};
 
-use super::{Air, Register};
+use super::Air;
 
 /// Lookup Entity IDs from their position on the board.
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct EntityMap(HashMap<Hex, Entity>);
 
+const HEX_RANGE: u32 = 64;
+const HEX_COUNT: u32 = Hex::range_count(HEX_RANGE);
+
 /// The state of the board.
 #[derive(Resource)]
-pub struct BoardState<const RANGE: u32>
-where
-    [(); Hex::range_count(RANGE) as usize]:,
-{
+pub struct BoardState {
     bounds: HexBounds,
     layout: HexLayout,
 
     /// The visible state of the board.
-    current: [StateId; Hex::range_count(RANGE) as usize],
+    current: [StateId; HEX_COUNT as usize],
 
     /// The delta for the next frame to be applied when [`Self::tick()`] is called.
     next: HashMap<Hex, StateId>,
 }
 
-impl<const RANGE: u32> BoardState<RANGE>
-where
-    [(); Hex::range_count(RANGE) as usize]:,
-{
+impl BoardState {
     pub fn bounds(&self) -> &HexBounds {
         &self.bounds
     }
@@ -55,11 +53,11 @@ where
     }
 
     fn index_to_hex(i: usize) -> Hex {
-        Hex::from_hexmod_coordinates(i as u32, RANGE)
+        Hex::from_hexmod_coordinates(i as u32, HEX_RANGE)
     }
 
     fn hex_to_index(hex: &Hex) -> usize {
-        hex.to_hexmod_coordinates(RANGE) as usize
+        hex.to_hexmod_coordinates(HEX_RANGE) as usize
     }
 
     /// Get the future [`StateId`] of a cell.
@@ -69,11 +67,7 @@ where
     }
 
     /// Return `true` if a `hex` has one of `state`.
-    pub fn is_state<'a>(
-        &self,
-        hex: Hex,
-        state: impl IntoIterator<Item = impl Into<StateId>>,
-    ) -> bool {
+    pub fn is_state<'a>(&self, hex: Hex, state: impl IntoIterator<Item = StateId>) -> bool {
         self.get_next(hex)
             .map(|id| state.into_iter().any(|other_id| *id == other_id.into()))
             .unwrap_or(false)
@@ -123,24 +117,21 @@ where
     }
 
     pub fn clear(&mut self) {
-        self.current = [Air::id(); Hex::range_count(RANGE) as usize];
+        self.current = [Air::id(); HEX_COUNT as usize];
         self.next.clear();
     }
 }
 
-impl<const RANGE: u32> Default for BoardState<RANGE>
-where
-    [(); Hex::range_count(RANGE) as usize]:,
-{
+impl Default for BoardState {
     fn default() -> Self {
         Self {
-            bounds: HexBounds::new(Hex::default(), RANGE),
+            bounds: HexBounds::new(Hex::default(), HEX_RANGE),
             layout: HexLayout {
                 orientation: HexOrientation::Pointy,
                 hex_size: Vec2::ONE * 2.0,
                 ..default()
             },
-            current: [Air::id(); Hex::range_count(RANGE) as usize],
+            current: [Air::id(); HEX_COUNT as usize],
             next: Default::default(),
         }
     }

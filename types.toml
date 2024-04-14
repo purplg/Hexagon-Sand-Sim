@@ -1,0 +1,17 @@
+Air=0
+Sapling=1
+Seed=2
+Trunk=3
+Dead=4
+Branch=5
+BranchLeft=6
+BranchRight=7
+Twig=8
+Leaf=9
+Water=10
+Fire=11
+Ember=12
+Sand=13
+Steam=14
+Wind=15
+Stone=16

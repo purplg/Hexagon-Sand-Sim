@@ -2,6 +2,8 @@ use bevy::prelude::*;
 
 use super::*;
 
+#[derive(UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Stone;
 
 impl StateInfo for Stone {

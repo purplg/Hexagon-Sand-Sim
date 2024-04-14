@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use hexx::EdgeDirection;
 use rand::Rng;
 use std::fmt::Debug;
+use unique_type_id::UniqueTypeId;
 
 use super::*;
 use crate::behavior::{
@@ -18,7 +19,8 @@ const BROWN: Color = Color::Rgba {
 
 /// A particle that falls down, and when sand and water are nearby,
 /// turns into a [`Sapling`].
-#[derive(Debug)]
+#[derive(Debug, UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Seed;
 
 impl StateInfo for Seed {
@@ -28,7 +30,7 @@ impl StateInfo for Seed {
 }
 
 impl Tick for Seed {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             // Move down
             RandomSwap {
@@ -42,7 +44,7 @@ impl Tick for Seed {
             Nearby::any_adjacent(
                 [Sand::id(), Water::id()],
                 Chance {
-                    step: Set(Sapling::id()),
+                    step: Set([Sapling::id()]),
                     chance: 1.,
                 },
             ),
@@ -52,7 +54,8 @@ impl Tick for Seed {
 }
 
 /// Grows upward a random height, then turns into a [`Trunk`] when unable to grow anymore.
-#[derive(Debug)]
+#[derive(Debug, UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Sapling;
 
 impl StateInfo for Sapling {
@@ -61,7 +64,7 @@ impl StateInfo for Sapling {
 }
 
 impl Tick for Sapling {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         // Branch when no sand nearby, try to start branching
         let length = rng.gen_range(10..100);
         (
@@ -72,11 +75,11 @@ impl Tick for Sapling {
                 then: (
                     // If next to Sand or Dead, change to Trunk
                     Nearby::any_adjacent(
-                        Self::id(),
-                        Nearby::any_adjacent([Sand::id(), Dead::id()], Set(Trunk::id())),
+                        [Self::id()],
+                        Nearby::any_adjacent([Sand::id(), Dead::id()], Set([Trunk::id()])),
                     ),
                     // If next some trunks, turn into a trunk
-                    Nearby::any_adjacent([Self::id(), Trunk::id()], Set(Trunk::id())),
+                    Nearby::any_adjacent([Self::id(), Trunk::id()], Set([Trunk::id()])),
                     // Otherwise, try to grow
                     NextTo {
                         directions: [
@@ -91,12 +94,12 @@ impl Tick for Sapling {
                                 EdgeDirection::POINTY_TOP_RIGHT,
                             ],
                             open: [Air::id(), Sand::id(), Water::id()],
-                            into: Self::id(),
+                            into: [Self::id()],
                         },
                     },
                 ),
             },
-            Set(Trunk::id()),
+            Set([Trunk::id()]),
         )
             .apply(hex, rng, states)
     }
@@ -104,7 +107,8 @@ impl Tick for Sapling {
 
 /// A sapling that doesn't grow upward anymore. It can try to turn
 /// into a branch when no other branches are nearby.
-#[derive(Debug)]
+#[derive(Debug, UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Trunk;
 
 impl StateInfo for Trunk {
@@ -113,14 +117,14 @@ impl StateInfo for Trunk {
 }
 
 impl Tick for Trunk {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             Nearby::any(
                 [Sand::id(), Dead::id()],
                 5,
                 (
                     Chance {
-                        step: Set(Dead::id()),
+                        step: Set([Dead::id()]),
                         chance: 0.01,
                     },
                     AssertFn(|| false),
@@ -133,14 +137,14 @@ impl Tick for Trunk {
                         hex.xrange(4)
                             .any(|hex| states.is_state(hex, [BranchLeft::id()]))
                     },
-                    Set(BranchLeft::id()),
+                    Set([BranchLeft::id()]),
                 ),
                 Unless(
                     || {
                         hex.xrange(4)
                             .any(|hex| states.is_state(hex, [BranchRight::id()]))
                     },
-                    Set(BranchRight::id()),
+                    Set([BranchRight::id()]),
                 ),
             ),
         )
@@ -148,7 +152,8 @@ impl Tick for Trunk {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Dead;
 
 impl StateInfo for Dead {
@@ -158,14 +163,15 @@ impl StateInfo for Dead {
 
 impl Tick for Dead {}
 
-#[derive(Debug)]
+#[derive(Debug, UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 struct Branch {
     direction: EdgeDirection,
     grow_into: StateId,
 }
 
 impl Step for Branch {
-    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState<64>) -> Option<BoardSlice> {
+    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
         (
             // When next to other tree components, just stop doing anything.
             Nearby::some_adjacent(
@@ -177,10 +183,10 @@ impl Step for Branch {
                     Twig::id(),
                 ],
                 2,
-                Set(Dead::id()),
+                Set([Dead::id()]),
             ),
             // When near other branches, also stop doing anything
-            Nearby::any([BranchLeft::id(), BranchRight::id()], 25, Set(Dead::id())),
+            Nearby::any([BranchLeft::id(), BranchRight::id()], 25, Set([Dead::id()])),
             // Otherwise, try and grow right.
             Choose {
                 // Grow
@@ -199,7 +205,7 @@ impl Step for Branch {
                     },
                 ),
                 // Chance to stop growing
-                b: Choose::half(Set(Twig::id()), Set(Dead::id())),
+                b: Choose::half(Set([Twig::id()]), Set([Dead::id()])),
                 chance: 0.8,
             },
         )
@@ -207,7 +213,8 @@ impl Step for Branch {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct BranchLeft;
 
 impl StateInfo for BranchLeft {
@@ -216,7 +223,7 @@ impl StateInfo for BranchLeft {
 }
 
 impl Tick for BranchLeft {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         Branch {
             direction: EdgeDirection::POINTY_TOP_LEFT,
             grow_into: Self::id(),
@@ -225,7 +232,8 @@ impl Tick for BranchLeft {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct BranchRight;
 
 impl StateInfo for BranchRight {
@@ -234,16 +242,17 @@ impl StateInfo for BranchRight {
 }
 
 impl Tick for BranchRight {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         Branch {
             direction: EdgeDirection::POINTY_TOP_RIGHT,
-            grow_into: Self::id(),
+            grow_into: Self::id().into(),
         }
         .apply(hex, rng, states)
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Twig;
 
 impl StateInfo for Twig {
@@ -252,7 +261,7 @@ impl StateInfo for Twig {
 }
 
 impl Tick for Twig {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
             step: Infect {
                 directions: EdgeDirection::ALL_DIRECTIONS,
@@ -265,7 +274,8 @@ impl Tick for Twig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Leaf;
 
 impl StateInfo for Leaf {
@@ -274,7 +284,7 @@ impl StateInfo for Leaf {
 }
 
 impl Tick for Leaf {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         let length = 30;
         WhileConnected {
             walkable: [Self::id(), Trunk::id(), Dead::id()],

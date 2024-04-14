@@ -9,6 +9,7 @@ use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorO
 use noisy_bevy::simplex_noise_2d;
 use rand::Rng;
 pub use state::BoardState;
+use unique_type_id::UniqueTypeId as _;
 
 use crate::{cell::*, input::Input, rng::RngSource, ui::Palette};
 use bevy::{math::vec2, prelude::*, window::PrimaryWindow};
@@ -20,7 +21,7 @@ pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         // Adjust the size and layout of the board.
-        app.init_resource::<BoardState<64>>();
+        app.init_resource::<BoardState>();
         app.insert_resource(TickRate::new(Duration::from_millis(15)));
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
@@ -61,7 +62,7 @@ impl SimState {
 struct TickEvent;
 
 /// Generate a fresh board.
-pub fn startup_system(mut states: ResMut<BoardState<64>>, mut rng: ResMut<RngSource>) {
+pub fn startup_system(mut states: ResMut<BoardState>, mut rng: ResMut<RngSource>) {
     states.clear();
     for hex in states.bounds().all_coords() {
         let chance: f32 = rng.gen();
@@ -136,7 +137,7 @@ fn tick_system(
 
 /// System to run the simulation every frame.
 fn sim_system(
-    mut states: ResMut<BoardState<64>>,
+    mut states: ResMut<BoardState>,
     registry: Res<CellRegistry>,
     mut rng: ResMut<RngSource>,
 ) {
@@ -151,7 +152,7 @@ fn sim_system(
 }
 
 /// Move all the queued states into the current state.
-fn flush_system(mut states: ResMut<BoardState<64>>) {
+fn flush_system(mut states: ResMut<BoardState>) {
     states.tick();
 }
 
@@ -161,7 +162,7 @@ fn control_system(
     query: Query<&ActionState<Input>>,
     mut tick_event: EventWriter<TickEvent>,
     mut rate: ResMut<TickRate>,
-    mut states: ResMut<BoardState<64>>,
+    mut states: ResMut<BoardState>,
     palette: Res<Palette>,
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
@@ -200,7 +201,7 @@ fn control_system(
 /// System to render the cells on the board... using Gizmos!
 fn render_system(
     mut draw: Gizmos,
-    states: Res<BoardState<64>>,
+    states: Res<BoardState>,
     registry: Res<CellRegistry>,
     mut rng: ResMut<RngSource>,
     time: Res<Time>,

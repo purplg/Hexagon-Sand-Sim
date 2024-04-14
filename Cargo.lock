@@ -1891,6 +1891,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs2"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9564fc758e15025b46aa6643b1b77d047d1a56a1aea6e01002ac0c7026876213"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "futures-core"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3267,6 +3277,7 @@ dependencies = [
  "noisy_bevy",
  "pathfinding",
  "rand",
+ "unique-type-id",
 ]
 
 [[package]]
@@ -3657,6 +3668,26 @@ name = "unicode-xid"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
+
+[[package]]
+name = "unique-type-id"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0462fbf31a136eb58d768f742ff34d9de41fe8b167aed5821f59163a9527a6b"
+dependencies = [
+ "unique-type-id-derive",
+]
+
+[[package]]
+name = "unique-type-id-derive"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "407e1420003f468eb3b9b7dafbed105a2add06b6a18e1291ea00ec81ee2de406"
+dependencies = [
+ "fs2",
+ "quote",
+ "syn 2.0.58",
+]
 
 [[package]]
 name = "url"

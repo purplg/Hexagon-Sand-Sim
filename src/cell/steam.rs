@@ -4,6 +4,8 @@ use hexx::EdgeDirection;
 use super::*;
 use crate::behavior::*;
 
+#[derive(UniqueTypeId)]
+#[UniqueTypeIdType = "u32"]
 pub struct Steam;
 
 impl StateInfo for Steam {
@@ -18,11 +20,11 @@ impl StateInfo for Steam {
 }
 
 impl Tick for Steam {
-    fn tick(&self, hex: &Hex, states: &BoardState<64>, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             // Condense
             Chance {
-                step: Set(Water::id()),
+                step: Set([Water::id()]),
                 chance: 0.0001,
             },
             // Move up
