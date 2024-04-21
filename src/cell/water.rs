@@ -45,7 +45,7 @@ impl Tick for Water {
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
                 open: [Air::id(), Self::id()],
-                drag: [Sand::id()],
+                drag: [Sand::id(), Seed::id()],
             },
             // Move down
             RandomSwap {
