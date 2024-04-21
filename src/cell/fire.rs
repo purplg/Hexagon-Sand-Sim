@@ -24,7 +24,7 @@ impl Tick for Fire {
         (
             Chance {
                 step: Set([Air::id()]),
-                chance: 0.005,
+                chance: 0.05,
             },
             Chance {
                 step: Infect {
