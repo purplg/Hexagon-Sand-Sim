@@ -60,7 +60,7 @@ impl Tick for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [Air::id(), Water::id(), Sand::id()],
+                open: [Air::id(), Water::id(), Steam::id(), Sand::id()],
             },
         )
             .apply(hex, rng, states)
