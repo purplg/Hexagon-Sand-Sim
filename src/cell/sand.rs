@@ -19,6 +19,7 @@ impl StateInfo for Sand {
             alpha: 0.0,
         },
         speed: Vec2::ZERO,
+        scale: Vec2::ONE,
     };
     const HIDDEN: bool = false;
 }

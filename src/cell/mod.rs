@@ -61,6 +61,7 @@ pub enum HexColor {
         base_color: Color,
         offset_color: Color,
         speed: Vec2,
+        scale: Vec2,
     },
 }
 

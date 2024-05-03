@@ -99,9 +99,9 @@ pub fn startup_system(
         entity.insert(texture.clone());
 
         let chance: f32 = rng.gen();
-        let state_id = if chance < 0.25 {
+        let state_id = if chance < 0.0 {
             Sand::id()
-        } else if chance < 0.50 {
+        } else if chance < 0.0 {
             Fire::id()
         } else if chance < 0.75 {
             Water::id()
@@ -267,6 +267,7 @@ fn gizmo_render_system(
                     base_color,
                     offset_color,
                     speed,
+                    scale,
                 } => {
                     let world_pos = states.layout().hex_to_world_pos(hex);
                     let pos = vec2(
@@ -316,11 +317,12 @@ fn sprite_render_system(
                         base_color,
                         offset_color,
                         speed,
+                        scale,
                     } => {
                         let world_pos = states.layout().hex_to_world_pos(hex);
                         let pos = vec2(
-                            world_pos.x + time.elapsed_seconds() * speed.x,
-                            world_pos.y + time.elapsed_seconds() * speed.y,
+                            world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
+                            world_pos.y * scale.y + time.elapsed_seconds() * speed.y,
                         );
                         Color::Rgba {
                             red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),

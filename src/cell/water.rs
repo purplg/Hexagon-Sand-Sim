@@ -21,10 +21,11 @@ impl StateInfo for Water {
         offset_color: Color::Rgba {
             red: 0.0,
             green: 0.0,
-            blue: 0.5,
-            alpha: -1.0,
+            blue: 0.2,
+            alpha: -0.2,
         },
         speed: Vec2::X,
+        scale: Vec2::splat(0.02),
     };
     const HIDDEN: bool = false;
 }
