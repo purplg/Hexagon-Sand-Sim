@@ -24,7 +24,7 @@ impl Tick for Wind {
         (
             // Dissipate
             Chance {
-                step: Set([Air::id()]),
+                to: Set([Air::id()]),
                 chance: 0.01,
             },
             Offscreen([
@@ -42,7 +42,7 @@ impl Tick for Wind {
                 drag: [Water::id(), Fire::id(), Sand::id()],
             },
             Chance {
-                step: Infect {
+                to: Infect {
                     directions: [
                         EdgeDirection::POINTY_LEFT,
                         EdgeDirection::POINTY_BOTTOM_LEFT,

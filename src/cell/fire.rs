@@ -23,11 +23,11 @@ impl Tick for Fire {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             Chance {
-                step: Set([Air::id()]),
+                to: Set([Air::id()]),
                 chance: 0.05,
             },
             Chance {
-                step: Infect {
+                to: Infect {
                     directions: EdgeDirection::ALL_DIRECTIONS,
                     open: [
                         Seed::id(),
@@ -89,7 +89,7 @@ impl Tick for Ember {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             Chance {
-                step: Set([Air::id()]),
+                to: Set([Air::id()]),
                 chance: 0.005,
             },
             Annihilate {
@@ -98,7 +98,7 @@ impl Tick for Ember {
                 into: [Steam::id()],
             },
             Chance {
-                step: Infect {
+                to: Infect {
                     directions: EdgeDirection::ALL_DIRECTIONS,
                     open: [
                         Seed::id(),

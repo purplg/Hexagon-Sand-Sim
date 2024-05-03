@@ -44,7 +44,7 @@ impl Tick for Seed {
             Nearby::any_adjacent(
                 [Sand::id(), Water::id()],
                 Chance {
-                    step: Set([Sapling::id()]),
+                    to: Set([Sapling::id()]),
                     chance: 1.,
                 },
             ),
@@ -124,7 +124,7 @@ impl Tick for Trunk {
                 5,
                 (
                     Chance {
-                        step: Set([Dead::id()]),
+                        to: Set([Dead::id()]),
                         chance: 0.01,
                     },
                     AssertFn(|| false),
@@ -263,7 +263,7 @@ impl StateInfo for Twig {
 impl Tick for Twig {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         Chance {
-            step: Infect {
+            to: Infect {
                 directions: EdgeDirection::ALL_DIRECTIONS,
                 open: [Air::id()],
                 into: [Leaf::id()],
@@ -297,7 +297,7 @@ impl Tick for Leaf {
                     count: 50,
                     then: (
                         Chance {
-                            step: Infect {
+                            to: Infect {
                                 directions: EdgeDirection::ALL_DIRECTIONS,
                                 open: [Air::id()],
                                 into: [Wind::id()],

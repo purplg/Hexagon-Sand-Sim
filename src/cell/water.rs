@@ -33,7 +33,7 @@ impl Tick for Water {
         (
             // Evaporate
             Chance {
-                step: Set([Steam::id()]),
+                to: Set([Steam::id()]),
                 chance: 0.0001,
             },
             // Drag sand
@@ -58,7 +58,7 @@ impl Tick for Water {
             // Move through thick materials
             Chance {
                 chance: 0.01,
-                step: RandomSwap {
+                to: RandomSwap {
                     directions: [
                         EdgeDirection::POINTY_TOP_LEFT,
                         EdgeDirection::POINTY_TOP_RIGHT,

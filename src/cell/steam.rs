@@ -24,7 +24,7 @@ impl Tick for Steam {
         (
             // Condense
             Chance {
-                step: Set([Water::id()]),
+                to: Set([Water::id()]),
                 chance: 0.0001,
             },
             // Move up

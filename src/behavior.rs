@@ -183,7 +183,7 @@ impl<Dir: Directions, O: States, D: States> Step for Drag<Dir, O, D> {
 /// A chance for a step to occur.
 #[derive(Debug)]
 pub struct Chance<S: Step> {
-    pub step: S,
+    pub to: S,
     pub chance: f32,
 }
 
@@ -191,7 +191,7 @@ impl<S: Step> Step for Chance<S> {
     fn apply<R: rand::Rng>(self, hex: &Hex, mut rng: R, states: &BoardState) -> Option<BoardSlice> {
         let attempt = rng.gen::<f32>();
         if attempt < self.chance {
-            self.step.apply(hex, rng, states)
+            self.to.apply(hex, rng, states)
         } else {
             None
         }
