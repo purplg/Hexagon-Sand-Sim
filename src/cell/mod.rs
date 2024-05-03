@@ -119,12 +119,7 @@ impl BoardSlice {
 }
 
 pub trait Tick {
-    fn tick(
-        &self,
-        _from: &Hex,
-        _states: &BoardState,
-        _rng: &mut SmallRng,
-    ) -> Option<BoardSlice> {
+    fn tick(&self, _from: &Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice> {
         None
     }
 }

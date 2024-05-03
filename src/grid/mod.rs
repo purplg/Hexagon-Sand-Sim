@@ -12,7 +12,7 @@ pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
 use crate::{cell::*, input::Input, rng::RngSource, ui::Palette};
-use bevy::{math::vec2, prelude::*, window::PrimaryWindow};
+use bevy::{math::vec2, prelude::*, utils::HashMap, window::PrimaryWindow};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
 
@@ -34,7 +34,8 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, control_system);
         app.add_systems(PreUpdate, sim_system.run_if(on_event::<TickEvent>()));
         app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
-        app.add_systems(Update, render_system);
+        // app.add_systems(Update, gizmo_render_system);
+        app.add_systems(Update, sprite_render_system);
     }
 }
 
@@ -61,22 +62,56 @@ impl SimState {
 #[derive(Event)]
 struct TickEvent;
 
+#[derive(Component)]
+struct HexCell {
+    hex: Hex,
+}
+
+#[derive(Resource, Default, Deref, DerefMut)]
+struct HexEntities(HashMap<Hex, Entity>);
+
+#[derive(Resource, Deref)]
+pub struct HexTexture(Handle<Image>);
+
 /// Generate a fresh board.
-pub fn startup_system(mut states: ResMut<BoardState>, mut rng: ResMut<RngSource>) {
+pub fn startup_system(
+    mut commands: Commands,
+    mut states: ResMut<BoardState>,
+    mut rng: ResMut<RngSource>,
+    asset_loader: Res<AssetServer>,
+) {
+    let mut entities = HexEntities::default();
+
+    let texture = HexTexture(asset_loader.load("hex.png"));
     states.clear();
     for hex in states.bounds().all_coords() {
+        let mut entity = commands.spawn_empty();
+        entities.insert(hex, entity.id());
+
+        entity.insert(HexCell { hex });
+        entity.insert(SpriteBundle {
+            transform: Transform::from_translation(
+                states.layout().hex_to_world_pos(hex).extend(0.0),
+            )
+            .with_scale(Vec3::new(0.063, 0.063, 1.0)),
+            ..default()
+        });
+        entity.insert(texture.clone());
+
         let chance: f32 = rng.gen();
         let state_id = if chance < 0.25 {
             Sand::id()
-        } else if chance < 0.0 {
+        } else if chance < 0.50 {
             Fire::id()
-        } else if chance < 0.0 {
+        } else if chance < 0.75 {
             Water::id()
         } else {
             Air::id()
         };
         states.set_next(hex, state_id);
     }
+    commands.insert_resource(texture);
+    commands.insert_resource(entities);
     states.tick();
 }
 
@@ -199,7 +234,7 @@ fn control_system(
 }
 
 /// System to render the cells on the board... using Gizmos!
-fn render_system(
+fn gizmo_render_system(
     mut draw: Gizmos,
     states: Res<BoardState>,
     registry: Res<CellRegistry>,
@@ -247,5 +282,55 @@ fn render_system(
                 }
             },
         );
+    }
+}
+
+/// System to render the cells on the board... using Sprites!
+fn sprite_render_system(
+    mut commands: Commands,
+    mut rng: ResMut<RngSource>,
+    entities: Res<HexEntities>,
+    states: Res<BoardState>,
+    registry: Res<CellRegistry>,
+    time: Res<Time>,
+) where
+    [(); Hex::range_count(64) as usize]: Sized,
+{
+    for (hex, id) in states.iter() {
+        commands
+            .entity(*entities.get(&hex).unwrap())
+            .insert(Sprite {
+                color: match *registry.color(id) {
+                    HexColor::Invisible => Color::NONE,
+                    HexColor::Static(color) => color,
+                    HexColor::Flickering {
+                        base_color,
+                        offset_color,
+                    } => Color::Rgba {
+                        red: base_color.r() + rng.gen::<f32>() * offset_color.r(),
+                        green: base_color.g() + rng.gen::<f32>() * offset_color.g(),
+                        blue: base_color.b() + rng.gen::<f32>() * offset_color.b(),
+                        alpha: base_color.a() + rng.gen::<f32>() * offset_color.a(),
+                    },
+                    HexColor::Noise {
+                        base_color,
+                        offset_color,
+                        speed,
+                    } => {
+                        let world_pos = states.layout().hex_to_world_pos(hex);
+                        let pos = vec2(
+                            world_pos.x + time.elapsed_seconds() * speed.x,
+                            world_pos.y + time.elapsed_seconds() * speed.y,
+                        );
+                        Color::Rgba {
+                            red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
+                            green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
+                            blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
+                            alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
+                        }
+                    }
+                },
+                ..default()
+            });
     }
 }
