@@ -62,9 +62,7 @@ impl SimState {
 struct TickEvent;
 
 #[derive(Component)]
-struct HexCell {
-    hex: Hex,
-}
+struct HexCell;
 
 #[derive(Resource, Default, Deref, DerefMut)]
 struct HexEntities(HashMap<Hex, Entity>);
@@ -87,7 +85,7 @@ pub fn startup_system(
         let mut entity = commands.spawn_empty();
         entities.insert(hex, entity.id());
 
-        entity.insert(HexCell { hex });
+        entity.insert(HexCell);
         entity.insert(SpriteBundle {
             transform: Transform::from_translation(
                 states.layout().hex_to_world_pos(hex).extend(0.0),
