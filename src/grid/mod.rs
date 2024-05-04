@@ -34,7 +34,6 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, control_system);
         app.add_systems(PreUpdate, sim_system.run_if(on_event::<TickEvent>()));
         app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
-        // app.add_systems(Update, gizmo_render_system);
         app.add_systems(Update, sprite_render_system);
     }
 }
@@ -233,59 +232,6 @@ fn control_system(
                 }
             }
         }
-    }
-}
-
-/// System to render the cells on the board... using Gizmos!
-fn gizmo_render_system(
-    mut draw: Gizmos,
-    states: Res<BoardState>,
-    registry: Res<CellRegistry>,
-    mut rng: ResMut<RngSource>,
-    time: Res<Time>,
-) where
-    [(); Hex::range_count(64) as usize]: Sized,
-{
-    // HACK Why 0.7? I don't know but it lines up...
-    let size = states.layout().hex_size.length() * 0.7;
-
-    for (hex, id) in states.iter() {
-        draw.primitive_2d(
-            RegularPolygon::new(size, 6),
-            states.layout().hex_to_world_pos(hex),
-            0.0,
-            match *registry.color(id) {
-                HexColor::Invisible => Color::NONE,
-                HexColor::Static(color) => color,
-                HexColor::Flickering {
-                    base_color,
-                    offset_color,
-                } => Color::Rgba {
-                    red: base_color.r() + rng.gen::<f32>() * offset_color.r(),
-                    green: base_color.g() + rng.gen::<f32>() * offset_color.g(),
-                    blue: base_color.b() + rng.gen::<f32>() * offset_color.b(),
-                    alpha: base_color.a() + rng.gen::<f32>() * offset_color.a(),
-                },
-                HexColor::Noise {
-                    base_color,
-                    offset_color,
-                    speed,
-                    scale,
-                } => {
-                    let world_pos = states.layout().hex_to_world_pos(hex);
-                    let pos = vec2(
-                        world_pos.x + time.elapsed_seconds() * speed.x,
-                        world_pos.y + time.elapsed_seconds() * speed.y,
-                    );
-                    Color::Rgba {
-                        red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
-                        green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
-                        blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
-                        alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
-                    }
-                }
-            },
-        );
     }
 }
 
