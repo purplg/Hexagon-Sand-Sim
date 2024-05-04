@@ -21,7 +21,10 @@ pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         // Adjust the size and layout of the board.
-        app.init_resource::<BoardState>();
+        let board_state = BoardState::default();
+        let cell_positions = CellPositions::new(board_state.bounds());
+        app.insert_resource(board_state);
+        app.insert_resource(cell_positions);
         app.insert_resource(TickRate::new(Duration::from_millis(15)));
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
@@ -66,6 +69,19 @@ struct HexCell;
 
 #[derive(Resource, Default, Deref, DerefMut)]
 struct HexEntities(HashMap<Hex, Entity>);
+
+#[derive(Resource, Deref)]
+pub struct CellPositions(Vec<Hex>);
+
+impl CellPositions {
+    pub fn new(bounds: &HexBounds) -> Self {
+        Self(bounds.all_coords().collect::<Vec<_>>())
+    }
+
+    pub fn shuffle<R: rand::Rng>(&mut self, rng: &mut R) {
+        self.0.as_mut_slice().shuffle(rng);
+    }
+}
 
 #[derive(Resource, Deref)]
 pub struct HexTexture(Handle<Image>);
@@ -170,19 +186,19 @@ fn tick_system(
 /// System to run the simulation every frame.
 fn sim_system(
     mut states: ResMut<BoardState>,
+    mut positions: ResMut<CellPositions>,
     registry: Res<CellRegistry>,
     mut rng: ResMut<RngSource>,
 ) {
-    let mut slices = states
-        .iter()
-        .filter_map(|(hex, id)| registry.get(id).map(|tickable| (hex, tickable)))
-        .filter_map(|(hex, cell)| cell.behavior.tick(&hex, &states, &mut rng))
-        .collect::<Vec<_>>();
+    let rng = &mut **rng;
+    positions.shuffle(rng);
 
-    slices.as_mut_slice().shuffle(&mut **rng);
-
-    for slice in slices {
-        states.apply(slice);
+    for hex in positions.iter() {
+        let id = states.get_current(*hex).unwrap();
+        let cell = registry.get(id).unwrap();
+        if let Some(slice) = cell.behavior.tick(hex, &states, rng) {
+            states.apply(slice);
+        }
     }
 }
 

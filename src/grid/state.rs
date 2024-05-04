@@ -42,6 +42,10 @@ impl BoardState {
             .map(|(i, id)| (Self::index_to_hex(i), id))
     }
 
+    pub fn count(&self) -> usize {
+        self.current.len()
+    }
+
     /// Get the [`StateId`] currently visible in a cell.
     pub fn get_current(&self, hex: impl Into<Hex>) -> Option<&StateId> {
         let hex = hex.into();
