@@ -122,7 +122,7 @@ impl<D: Directions, O: States, I: States> Step for Infect<D, O, I> {
         if states.is_state(to, self.open) {
             Some(BoardSlice(vec![(
                 to,
-                self.into.into_iter().choose(&mut rng).unwrap().into(),
+                self.into.into_iter().choose(&mut rng).unwrap(),
             )]))
         } else {
             None
@@ -143,7 +143,7 @@ impl<D: Directions, O: States, I: States> Step for Annihilate<D, O, I> {
         let to = hex.neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
         if states.is_state(to, self.open) {
             let id = self.into.into_iter().choose(&mut rng).unwrap();
-            Some(BoardSlice(vec![(*hex, id.into()), (to, id.into())]))
+            Some(BoardSlice(vec![(*hex, id), (to, id)]))
         } else {
             None
         }
@@ -235,9 +235,7 @@ pub struct Assert<S: Step>(pub S);
 
 impl<S: Step> Step for Assert<S> {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
-        self.0
-            .apply(hex, rng, states)
-            .or_else(|| Some(BoardSlice::EMPTY))
+        self.0.apply(hex, rng, states).or(Some(BoardSlice::EMPTY))
     }
 }
 
@@ -521,7 +519,7 @@ impl<I: States> Step for Set<I> {
         } else {
             Some(BoardSlice(vec![(
                 *hex,
-                self.0.into_iter().choose(&mut rng).unwrap().into(),
+                self.0.into_iter().choose(&mut rng).unwrap(),
             )]))
         }
     }

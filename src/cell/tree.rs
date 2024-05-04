@@ -245,7 +245,7 @@ impl Tick for BranchRight {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         Branch {
             direction: EdgeDirection::POINTY_TOP_RIGHT,
-            grow_into: Self::id().into(),
+            grow_into: Self::id(),
         }
         .apply(hex, rng, states)
     }

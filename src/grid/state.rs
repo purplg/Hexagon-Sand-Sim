@@ -67,13 +67,13 @@ impl BoardState {
     }
 
     /// Return `true` if a `hex` has one of `state`.
-    pub fn is_state<'a>(&self, hex: Hex, state: impl IntoIterator<Item = StateId>) -> bool {
+    pub fn is_state(&self, hex: Hex, state: impl IntoIterator<Item = StateId>) -> bool {
         self.get_next(hex)
-            .map(|id| state.into_iter().any(|other_id| *id == other_id.into()))
+            .map(|id| state.into_iter().any(|other_id| *id == other_id))
             .unwrap_or(false)
     }
 
-    pub fn find_state<'a>(
+    pub fn find_state(
         &self,
         hex: Hex,
         state: impl IntoIterator<Item = impl Into<StateId>>,
