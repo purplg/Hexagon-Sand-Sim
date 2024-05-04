@@ -29,7 +29,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
 
-        app.add_systems(Startup, startup_system);
+        app.add_systems(Startup, (startup_system, generate_system));
         app.add_systems(
             Update,
             tick_system.run_if(|state: Res<State<SimState>>| state.is_running()),
@@ -89,18 +89,14 @@ pub struct HexTexture(Handle<Image>);
 /// Generate a fresh board.
 pub fn startup_system(
     mut commands: Commands,
-    mut states: ResMut<BoardState>,
-    mut rng: ResMut<RngSource>,
+    states: ResMut<BoardState>,
     asset_loader: Res<AssetServer>,
 ) {
     let mut entities = HexEntities::default();
-
     let texture = HexTexture(asset_loader.load("hex.png"));
-    states.clear();
     for hex in states.bounds().all_coords() {
         let mut entity = commands.spawn_empty();
         entities.insert(hex, entity.id());
-
         entity.insert(HexCell);
         entity.insert(SpriteBundle {
             transform: Transform::from_translation(
@@ -110,7 +106,15 @@ pub fn startup_system(
             ..default()
         });
         entity.insert(texture.clone());
+    }
+    commands.insert_resource(texture);
+    commands.insert_resource(entities);
+}
 
+/// Generate a fresh board.
+pub fn generate_system(mut states: ResMut<BoardState>, mut rng: ResMut<RngSource>) {
+    states.clear();
+    for hex in states.bounds().all_coords() {
         let chance: f32 = rng.gen();
         let state_id = if chance < 0.25 {
             Sand::id()
@@ -123,8 +127,6 @@ pub fn startup_system(
         };
         states.set_next(hex, state_id);
     }
-    commands.insert_resource(texture);
-    commands.insert_resource(entities);
     states.tick();
 }
 

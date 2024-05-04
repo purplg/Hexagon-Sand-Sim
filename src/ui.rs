@@ -76,7 +76,7 @@ fn update_system(world: &mut World) {
             ui.strong("Board must be generated when radius changes");
             ui.horizontal_top(|ui| {
                 if ui.button("Generate").clicked() {
-                    world.run_system_once(grid::startup_system);
+                    world.run_system_once(grid::generate_system);
                 }
                 if ui.button("Clear").clicked() {
                     let mut states = world.resource_mut::<BoardState>();
