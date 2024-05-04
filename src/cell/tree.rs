@@ -69,14 +69,14 @@ impl Tick for Sapling {
         let length = rng.gen_range(10..100);
         (
             WhileConnected {
-                walkable: [Self::id(), Trunk::id(), Dead::id()],
+                walkable: [Self::id(), Trunk::id(), DeadTrunk::id()],
                 goal: [Sand::id()],
                 distance: length,
                 then: (
                     // If next to Sand or Dead, change to Trunk
                     Nearby::any_adjacent(
                         [Self::id()],
-                        Nearby::any_adjacent([Sand::id(), Dead::id()], Set([Trunk::id()])),
+                        Nearby::any_adjacent([Sand::id(), DeadTrunk::id()], Set([Trunk::id()])),
                     ),
                     // If next some trunks, turn into a trunk
                     Nearby::any_adjacent([Self::id(), Trunk::id()], Set([Trunk::id()])),
@@ -120,11 +120,11 @@ impl Tick for Trunk {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             Nearby::any(
-                [Sand::id(), Dead::id()],
+                [Sand::id(), DeadTrunk::id()],
                 5,
                 (
                     Chance {
-                        to: Set([Dead::id()]),
+                        to: Set([DeadTrunk::id()]),
                         chance: 0.01,
                     },
                     AssertFn(|| false),
@@ -154,14 +154,14 @@ impl Tick for Trunk {
 
 #[derive(Debug, UniqueTypeId)]
 #[UniqueTypeIdType = "u32"]
-pub struct Dead;
+pub struct DeadTrunk;
 
-impl StateInfo for Dead {
-    const NAME: &'static str = "Dead";
+impl StateInfo for DeadTrunk {
+    const NAME: &'static str = "Dead Trunk";
     const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
-impl Tick for Dead {}
+impl Tick for DeadTrunk {}
 
 #[derive(Debug, UniqueTypeId)]
 #[UniqueTypeIdType = "u32"]
@@ -178,15 +178,15 @@ impl Step for Branch {
                 [
                     BranchLeft::id(),
                     BranchRight::id(),
-                    Dead::id(),
+                    DeadTrunk::id(),
                     Trunk::id(),
                     Twig::id(),
                 ],
                 2,
-                Set([Dead::id()]),
+                Set([DeadTrunk::id()]),
             ),
             // When near other branches, also stop doing anything
-            Nearby::any([BranchLeft::id(), BranchRight::id()], 25, Set([Dead::id()])),
+            Nearby::any([BranchLeft::id(), BranchRight::id()], 25, Set([DeadTrunk::id()])),
             // Otherwise, try and grow right.
             Choose {
                 // Grow
@@ -205,7 +205,7 @@ impl Step for Branch {
                     },
                 ),
                 // Chance to stop growing
-                b: Choose::half(Set([Twig::id()]), Set([Dead::id()])),
+                b: Choose::half(Set([Twig::id()]), Set([DeadTrunk::id()])),
                 chance: 0.8,
             },
         )
@@ -287,7 +287,7 @@ impl Tick for Leaf {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         let length = 30;
         WhileConnected {
-            walkable: [Self::id(), Trunk::id(), Dead::id()],
+            walkable: [Self::id(), Trunk::id(), DeadTrunk::id()],
             goal: [Sand::id()],
             distance: length,
             then: (

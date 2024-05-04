@@ -38,7 +38,7 @@ impl bevy::prelude::Plugin for Plugin {
         registry.add(Stone);
         registry.add(Wind);
         registry.add(Seed);
-        registry.add(Dead);
+        registry.add(DeadTrunk);
         registry.add(Trunk);
         registry.add(BranchLeft);
         registry.add(BranchRight);
