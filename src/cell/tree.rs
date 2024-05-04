@@ -86,7 +86,7 @@ impl Tick for Sapling {
                             EdgeDirection::POINTY_TOP_LEFT,
                             EdgeDirection::POINTY_TOP_RIGHT,
                         ],
-                        next: [Air::id()],
+                        next: [Air::id(), Water::id()],
                         // Try to grow
                         step: Infect {
                             directions: [
