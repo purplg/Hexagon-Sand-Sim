@@ -99,9 +99,9 @@ pub fn startup_system(
         entity.insert(texture.clone());
 
         let chance: f32 = rng.gen();
-        let state_id = if chance < 0.0 {
+        let state_id = if chance < 0.25 {
             Sand::id()
-        } else if chance < 0.0 {
+        } else if chance < 0.50 {
             Fire::id()
         } else if chance < 0.75 {
             Water::id()
