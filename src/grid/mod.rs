@@ -7,7 +7,7 @@ use std::{
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use noisy_bevy::simplex_noise_2d;
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
@@ -176,11 +176,14 @@ fn sim_system(
     registry: Res<CellRegistry>,
     mut rng: ResMut<RngSource>,
 ) {
-    let slices = states
+    let mut slices = states
         .iter()
         .filter_map(|(hex, id)| registry.get(id).map(|tickable| (hex, tickable)))
         .filter_map(|(hex, cell)| cell.behavior.tick(&hex, &states, &mut rng))
         .collect::<Vec<_>>();
+
+    slices.as_mut_slice().shuffle(&mut **rng);
+
     for slice in slices {
         states.apply(slice);
     }
