@@ -7,7 +7,7 @@ use std::{
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use noisy_bevy::simplex_noise_2d;
-use rand::{seq::SliceRandom, Rng};
+use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
@@ -21,15 +21,11 @@ pub(super) struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         // Adjust the size and layout of the board.
-        let board_state = BoardState::default();
-        let cell_positions = CellPositions::new(board_state.bounds());
-        app.insert_resource(board_state);
-        app.insert_resource(cell_positions);
         app.insert_resource(TickRate::new(Duration::from_millis(15)));
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
 
-        app.add_systems(Startup, (startup_system, generate_system));
+        app.add_systems(Startup, (startup_system, generate_system).chain());
         app.add_systems(
             Update,
             tick_system.run_if(|state: Res<State<SimState>>| state.is_running()),
@@ -71,27 +67,12 @@ struct HexCell;
 struct HexEntities(HashMap<Hex, Entity>);
 
 #[derive(Resource, Deref)]
-pub struct CellPositions(Vec<Hex>);
-
-impl CellPositions {
-    pub fn new(bounds: &HexBounds) -> Self {
-        Self(bounds.all_coords().collect::<Vec<_>>())
-    }
-
-    pub fn shuffle<R: rand::Rng>(&mut self, rng: &mut R) {
-        self.0.as_mut_slice().shuffle(rng);
-    }
-}
-
-#[derive(Resource, Deref)]
 pub struct HexTexture(Handle<Image>);
 
 /// Generate a fresh board.
-pub fn startup_system(
-    mut commands: Commands,
-    states: ResMut<BoardState>,
-    asset_loader: Res<AssetServer>,
-) {
+pub fn startup_system(mut commands: Commands, asset_loader: Res<AssetServer>) {
+    let states = BoardState::default();
+    let cell_iter = CellIter::new(states.bounds(), 60_000);
     let mut entities = HexEntities::default();
     let texture = HexTexture(asset_loader.load("hex.png"));
     for hex in states.bounds().all_coords() {
@@ -107,6 +88,8 @@ pub fn startup_system(
         });
         entity.insert(texture.clone());
     }
+    commands.insert_resource(states);
+    commands.insert_resource(cell_iter);
     commands.insert_resource(texture);
     commands.insert_resource(entities);
 }
@@ -185,20 +168,68 @@ fn tick_system(
     }
 }
 
+#[derive(Resource)]
+pub struct CellIter {
+    positions: Vec<Hex>,
+    index: usize,
+    count: usize,
+    chunk_size: usize,
+    rng: SmallRng,
+}
+
+impl CellIter {
+    fn new(bounds: &HexBounds, chunk_size: usize) -> Self {
+        if bounds.radius == 0 {
+            panic!("Cannot iterate over an empty grid.")
+        }
+
+        let mut iter = Self {
+            positions: bounds.all_coords().collect::<Vec<_>>(),
+            index: 0,
+            count: 0,
+            chunk_size,
+            rng: SmallRng::from_entropy(),
+        };
+        iter.shuffle();
+        iter
+    }
+
+    fn shuffle(&mut self) {
+        self.positions.as_mut_slice().shuffle(&mut self.rng);
+    }
+}
+
+impl Iterator for CellIter {
+    type Item = Hex;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.count == self.chunk_size {
+            self.count = 0;
+            return None;
+        }
+        if self.index >= self.positions.len() {
+            self.index = 0;
+            self.shuffle();
+        }
+        let item = self.positions.get(self.index).copied();
+        self.index += 1;
+        self.count += 1;
+        item
+    }
+}
+
 /// System to run the simulation every frame.
 fn sim_system(
     mut states: ResMut<BoardState>,
-    mut positions: ResMut<CellPositions>,
+    mut positions: ResMut<CellIter>,
     registry: Res<CellRegistry>,
     mut rng: ResMut<RngSource>,
 ) {
     let rng = &mut **rng;
-    positions.shuffle(rng);
-
-    for hex in positions.iter() {
-        let id = states.get_current(*hex).unwrap();
+    for hex in &mut positions {
+        let id = states.get_current(hex).unwrap();
         let cell = registry.get(id).unwrap();
-        if let Some(slice) = cell.behavior.tick(hex, &states, rng) {
+        if let Some(slice) = cell.behavior.tick(&hex, &states, rng) {
             states.apply(slice);
         }
     }
