@@ -160,10 +160,7 @@ pub struct Drag<Dir: Directions, O: States, D: States> {
 
 impl<Dir: Directions, O: States, D: States> Step for Drag<Dir, O, D> {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
-        let swap = RandomSwap {
-            directions: self.directions,
-            open: self.open,
-        };
+        let swap = RandomSwap::adjacent(self.directions, self.open);
         let ((from, from_id), (to, to_id)) = swap.into_components(hex, rng, states)?;
         let dir = to.main_direction_to(from);
         let drag = from.neighbor(dir);
@@ -461,12 +458,32 @@ where
 pub struct RandomSwap<D: Directions, O: States> {
     pub directions: D,
     pub open: O,
+    pub distance: i32,
+    pub try_farthest: bool,
+}
+
+impl<D: Directions, S: States> RandomSwap<D, S> {
+    pub fn adjacent(directions: D, open: S) -> Self {
+        Self {
+            directions,
+            open,
+            distance: 1,
+            try_farthest: false,
+        }
+    }
 }
 
 impl<D: Directions, O: States> Step for RandomSwap<D, O> {
     fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
-        let (from, to) = self.into_components(hex, rng, states)?;
-        Some(BoardSlice(vec![from, to]))
+        if self.try_farthest {
+            while let Some((from, to)) = self.into_components(hex, rng, states) {
+                return Some(BoardSlice(vec![from, to]));
+            }
+            None
+        } else {
+            let (from, to) = self.into_components(hex, rng, states)?;
+            Some(BoardSlice(vec![from, to]))
+        }
     }
 }
 
@@ -477,7 +494,8 @@ impl<D: Directions, O: States> RandomSwap<D, O> {
         mut rng: impl rand::Rng,
         states: &BoardState,
     ) -> Option<((Hex, StateId), (Hex, StateId))> {
-        let to = hex.neighbor(self.directions.into_iter().choose(&mut rng).unwrap());
+        let to: Hex =
+            (self.directions.into_iter().choose(&mut rng).unwrap() * self.distance) + *hex;
         states
             .find_state(to, self.open)
             .map(|other| ((*hex, other), (to, *states.get_current(*hex).unwrap())))

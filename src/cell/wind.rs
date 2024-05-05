@@ -53,14 +53,14 @@ impl Tick for Wind {
                 },
                 chance: 0.01,
             },
-            RandomSwap {
-                directions: [
+            RandomSwap::adjacent(
+                [
                     EdgeDirection::POINTY_LEFT,
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_TOP_LEFT,
                 ],
-                open: [Air::id(), Self::id()],
-            },
+                [Air::id(), Self::id()],
+            ),
         )
             .apply(hex, rng, states)
     }

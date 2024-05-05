@@ -26,13 +26,13 @@ impl StateInfo for Sand {
 
 impl Tick for Sand {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        RandomSwap {
-            directions: [
+        RandomSwap::adjacent(
+            [
                 EdgeDirection::POINTY_BOTTOM_LEFT,
                 EdgeDirection::POINTY_BOTTOM_RIGHT,
             ],
-            open: [Air::id(), Wind::id(), Steam::id()],
-        }
+            [Air::id(), Wind::id(), Steam::id()],
+        )
         .apply(hex, rng, states)
     }
 }

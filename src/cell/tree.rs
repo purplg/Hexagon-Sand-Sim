@@ -33,13 +33,13 @@ impl Tick for Seed {
     fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         (
             // Move down
-            RandomSwap {
-                directions: [
+            RandomSwap::adjacent(
+                [
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                open: [Air::id(), Wind::id(), Steam::id(), Water::id()],
-            },
+                [Air::id(), Wind::id(), Steam::id(), Water::id()],
+            ),
             // Only attempt to grow when Sand or Water are nearby.
             Nearby::any_adjacent(
                 [Sand::id(), Water::id()],
@@ -186,7 +186,11 @@ impl Step for Branch {
                 Set([DeadTrunk::id()]),
             ),
             // When near other branches, also stop doing anything
-            Nearby::any([BranchLeft::id(), BranchRight::id()], 25, Set([DeadTrunk::id()])),
+            Nearby::any(
+                [BranchLeft::id(), BranchRight::id()],
+                25,
+                Set([DeadTrunk::id()]),
+            ),
             // Otherwise, try and grow right.
             Choose {
                 // Grow

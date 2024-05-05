@@ -53,15 +53,15 @@ impl Tick for Fire {
                 open: [Water::id()],
                 into: [Steam::id()],
             },
-            RandomSwap {
-                directions: [
+            RandomSwap::adjacent(
+                [
                     EdgeDirection::POINTY_LEFT,
                     EdgeDirection::POINTY_RIGHT,
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [Air::id(), Water::id(), Steam::id(), Sand::id()],
-            },
+                [Air::id(), Water::id(), Steam::id(), Sand::id()],
+            ),
         )
             .apply(hex, rng, states)
     }

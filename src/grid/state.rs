@@ -10,7 +10,7 @@ use super::Air;
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct EntityMap(HashMap<Hex, Entity>);
 
-const HEX_RANGE: u32 = 200;
+const HEX_RANGE: u32 = 128;
 const HEX_COUNT: u32 = Hex::range_count(HEX_RANGE);
 
 /// The state of the board.

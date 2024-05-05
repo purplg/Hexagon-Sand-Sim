@@ -28,18 +28,18 @@ impl Tick for Steam {
                 chance: 0.0001,
             },
             // Move up
-            RandomSwap {
-                directions: [
+            RandomSwap::adjacent(
+                [
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [Air::id(), Water::id()],
-            },
+                [Air::id(), Water::id()],
+            ),
             // Move laterally.
-            RandomSwap {
-                directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                open: [Air::id(), Water::id(), Fire::id()],
-            },
+            RandomSwap::adjacent(
+                [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
+                [Air::id(), Water::id(), Fire::id()],
+            ),
         )
             .apply(hex, rng, states)
     }
