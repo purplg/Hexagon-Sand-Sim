@@ -41,19 +41,18 @@ fn cursor_grab(
     }
 }
 
-fn zoom(
-    mut query: Query<&mut OrthographicProjection>,
-    input: Query<&ActionState<Input>>,
-    dt: Res<Time>,
-) {
+fn zoom(mut query: Query<&mut OrthographicProjection>, input: Query<&ActionState<Input>>) {
     let mut camera = query.single_mut();
     let input = input.single();
     let zoom = input.value(&Input::Zoom);
-
-    camera.scale *= 1. - zoom * dt.delta_seconds() * 50.;
+    camera.scale += zoom;
 }
 
-fn pan(mut query: Query<&mut Transform, With<Camera>>, input: Query<&ActionState<Input>>, dt: Res<Time>) {
+fn pan(
+    mut query: Query<&mut Transform, With<Camera>>,
+    input: Query<&ActionState<Input>>,
+    dt: Res<Time>,
+) {
     let mut transform = query.single_mut();
     let input = input.single();
     let Some(pan) = input.axis_pair(&Input::Pan) else {
