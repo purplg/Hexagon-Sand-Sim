@@ -30,10 +30,9 @@ impl bevy::prelude::Plugin for Plugin {
             Update,
             tick_system.run_if(|state: Res<State<SimState>>| state.is_running()),
         );
-        app.add_systems(Update, control_system);
         app.add_systems(PreUpdate, sim_system.run_if(on_event::<TickEvent>()));
         app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
-        app.add_systems(Update, sprite_render_system.run_if(on_event::<TickEvent>()));
+        app.add_systems(Update, (control_system, sprite_render_system.run_if(on_event::<TickEvent>())));
     }
 }
 
