@@ -73,7 +73,6 @@ fn update_system(world: &mut World) {
 
         ui.add_space(16.);
         ui.push_id(Id::from("control"), |ui| {
-            ui.strong("Board must be generated when radius changes");
             ui.horizontal_top(|ui| {
                 if ui.button("Generate").clicked() {
                     world.run_system_once(grid::generate_system);
