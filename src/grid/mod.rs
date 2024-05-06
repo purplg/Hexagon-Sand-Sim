@@ -33,7 +33,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, control_system);
         app.add_systems(PreUpdate, sim_system.run_if(on_event::<TickEvent>()));
         app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
-        app.add_systems(Update, sprite_render_system);
+        app.add_systems(Update, sprite_render_system.run_if(on_event::<TickEvent>()));
     }
 }
 
@@ -227,8 +227,8 @@ fn sim_system(
 ) {
     let rng = &mut **rng;
     for hex in &mut positions {
-        let id = states.get_current(hex).unwrap();
-        let cell = registry.get(id).unwrap();
+        let state = states.get_current(hex).unwrap();
+        let cell = registry.get(state).unwrap();
         if let Some(slice) = cell.behavior.tick(&hex, &states, rng) {
             states.apply(slice);
         }
@@ -293,9 +293,9 @@ fn sprite_render_system(
 ) where
     [(); Hex::range_count(64) as usize]: Sized,
 {
-    for (hex, id) in states.iter() {
+    for (hex, id) in &states.next {
         commands
-            .entity(*entities.get(&hex).unwrap())
+            .entity(*entities.get(hex).unwrap())
             .insert(Sprite {
                 color: match *registry.color(id) {
                     HexColor::Invisible => Color::NONE,
@@ -315,7 +315,7 @@ fn sprite_render_system(
                         speed,
                         scale,
                     } => {
-                        let world_pos = states.layout().hex_to_world_pos(hex);
+                        let world_pos = states.layout().hex_to_world_pos(*hex);
                         let pos = vec2(
                             world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
                             world_pos.y * scale.y + time.elapsed_seconds() * speed.y,

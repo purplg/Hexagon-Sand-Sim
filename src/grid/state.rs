@@ -23,7 +23,7 @@ pub struct BoardState {
     current: [StateId; HEX_COUNT as usize],
 
     /// The delta for the next frame to be applied when [`Self::tick()`] is called.
-    next: HashMap<Hex, StateId>,
+    pub next: HashMap<Hex, StateId>,
 }
 
 impl BoardState {
