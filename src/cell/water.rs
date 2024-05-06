@@ -35,7 +35,7 @@ impl Tick for Water {
             // Evaporate
             Chance {
                 to: Set([Steam::id()]),
-                chance: 0.0001,
+                chance: 0.00001,
             },
             // Drag sand
             Drag {
@@ -68,11 +68,20 @@ impl Tick for Water {
                 ),
             },
             // Move laterally
-            RandomSwap {
-                directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                open: [Air::id()],
-                distance: 5,
-                try_farthest: true,
+            Choose {
+                a: RandomSwap {
+                    directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
+                    open: [Air::id()],
+                    distance: 5,
+                    try_farthest: true,
+                },
+                b: RandomSwap {
+                    directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
+                    open: [Air::id(), Water::id()],
+                    distance: 5,
+                    try_farthest: true,
+                },
+                chance: 0.99,
             },
         )
             .apply(hex, rng, states)
