@@ -7,12 +7,15 @@ use std::{
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use noisy_bevy::simplex_noise_2d;
-use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
+use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng as _};
 pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
 use crate::{cell::*, input::Input, rng::RngSource, ui::Palette};
-use bevy::{math::vec2, prelude::*, utils::HashMap, window::PrimaryWindow};
+use bevy::{
+    app::MainScheduleOrder, ecs::schedule::ScheduleLabel, math::vec2, prelude::*, utils::HashMap,
+    window::PrimaryWindow,
+};
 use hexx::*;
 use leafwing_input_manager::prelude::*;
 
@@ -26,15 +29,43 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_event::<TickEvent>();
 
         app.add_systems(Startup, (startup_system, generate_system).chain());
+
         app.add_systems(
             Update,
             tick_system.run_if(|state: Res<State<SimState>>| state.is_running()),
         );
-        app.add_systems(PreUpdate, sim_system.run_if(on_event::<TickEvent>()));
-        app.add_systems(PostUpdate, flush_system.run_if(on_event::<TickEvent>()));
-        app.add_systems(Update, (control_system, sprite_render_system.run_if(on_event::<TickEvent>())));
+
+        let mut schedule = app.world.resource_mut::<MainScheduleOrder>();
+        schedule.insert_after(Update, CellPreUpdate);
+        schedule.insert_after(CellPreUpdate, CellUpdate);
+        schedule.insert_after(CellUpdate, CellRender);
+        schedule.insert_after(CellRender, CellPostUpdate);
+
+        app.add_systems(CellPreUpdate, control_system);
+        app.add_systems(CellUpdate, sim_system.run_if(on_event::<TickEvent>()));
+        app.add_systems(
+            CellRender,
+            sprite_render_system.run_if(on_event::<TickEvent>()),
+        );
+        app.add_systems(CellPostUpdate, flush_system);
     }
 }
+
+/// Before any cells have been ticked.
+#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
+struct CellPreUpdate;
+
+/// When cells are actively being mutated.
+#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
+struct CellUpdate;
+
+/// Cells sprites have been updated to reflect their state.
+#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
+struct CellRender;
+
+/// Cells have been committed to the [`BoardState`].
+#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
+struct CellPostUpdate;
 
 #[derive(
     States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect, Resource, InspectorOptions,
