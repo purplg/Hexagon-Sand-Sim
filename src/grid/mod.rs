@@ -28,7 +28,16 @@ impl bevy::prelude::Plugin for Plugin {
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
 
-        app.add_systems(Startup, (startup_system, generate_system).chain());
+        app.add_systems(
+            Startup,
+            (
+                startup_system,
+                generate_system,
+                sprite_render_system,
+                flush_system,
+            )
+                .chain(),
+        );
 
         app.add_systems(
             Update,
@@ -140,7 +149,6 @@ pub fn generate_system(mut states: ResMut<BoardState>, mut rng: ResMut<RngSource
         };
         states.set_next(hex, state_id);
     }
-    states.tick();
 }
 
 #[derive(Reflect, Resource, Default, InspectorOptions)]
