@@ -324,41 +324,39 @@ fn sprite_render_system(
     [(); Hex::range_count(64) as usize]: Sized,
 {
     for (hex, id) in &states.next {
-        commands
-            .entity(*entities.get(hex).unwrap())
-            .insert(Sprite {
-                color: match *registry.color(id) {
-                    HexColor::Invisible => Color::NONE,
-                    HexColor::Static(color) => color,
-                    HexColor::Flickering {
-                        base_color,
-                        offset_color,
-                    } => Color::Rgba {
-                        red: base_color.r() + rng.gen::<f32>() * offset_color.r(),
-                        green: base_color.g() + rng.gen::<f32>() * offset_color.g(),
-                        blue: base_color.b() + rng.gen::<f32>() * offset_color.b(),
-                        alpha: base_color.a() + rng.gen::<f32>() * offset_color.a(),
-                    },
-                    HexColor::Noise {
-                        base_color,
-                        offset_color,
-                        speed,
-                        scale,
-                    } => {
-                        let world_pos = states.layout().hex_to_world_pos(*hex);
-                        let pos = vec2(
-                            world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
-                            world_pos.y * scale.y + time.elapsed_seconds() * speed.y,
-                        );
-                        Color::Rgba {
-                            red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
-                            green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
-                            blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
-                            alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
-                        }
-                    }
+        commands.entity(*entities.get(hex).unwrap()).insert(Sprite {
+            color: match *registry.color(id) {
+                HexColor::Invisible => Color::NONE,
+                HexColor::Static(color) => color,
+                HexColor::Flickering {
+                    base_color,
+                    offset_color,
+                } => Color::Rgba {
+                    red: base_color.r() + rng.gen::<f32>() * offset_color.r(),
+                    green: base_color.g() + rng.gen::<f32>() * offset_color.g(),
+                    blue: base_color.b() + rng.gen::<f32>() * offset_color.b(),
+                    alpha: base_color.a() + rng.gen::<f32>() * offset_color.a(),
                 },
-                ..default()
-            });
+                HexColor::Noise {
+                    base_color,
+                    offset_color,
+                    speed,
+                    scale,
+                } => {
+                    let world_pos = states.layout().hex_to_world_pos(*hex);
+                    let pos = vec2(
+                        world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
+                        world_pos.y * scale.y + time.elapsed_seconds() * speed.y,
+                    );
+                    Color::Rgba {
+                        red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
+                        green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
+                        blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
+                        alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
+                    }
+                }
+            },
+            ..default()
+        });
     }
 }
