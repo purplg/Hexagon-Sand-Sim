@@ -275,7 +275,7 @@ fn sim_system(
 
 /// Move all the queued states into the current state.
 fn flush_system(mut states: ResMut<BoardState>) {
-    states.tick();
+    states.commit();
 }
 
 /// System to enable user control over the simulation.

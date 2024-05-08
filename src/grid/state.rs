@@ -113,7 +113,7 @@ impl BoardState {
     }
 
     /// Apply all changes in [`Self::next`] to [`Self::current`].
-    pub(super) fn tick(&mut self) {
+    pub(super) fn commit(&mut self) {
         for (hex, id) in self.next.drain() {
             let i = Self::hex_to_index(&hex);
             self.current[i] = id;
