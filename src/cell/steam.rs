@@ -19,8 +19,8 @@ impl StateInfo for Steam {
     const HIDDEN: bool = false;
 }
 
-impl Tick for Steam {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Steam {
+    fn tick(&self) -> impl Step {
         (
             // Condense
             Chance {
@@ -41,6 +41,5 @@ impl Tick for Steam {
                 [Air::id(), Water::id(), Fire::id()],
             ),
         )
-            .apply(hex, rng, states)
     }
 }

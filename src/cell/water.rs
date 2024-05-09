@@ -29,8 +29,8 @@ impl StateInfo for Water {
     };
     const HIDDEN: bool = false;
 }
-impl Tick for Water {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Water {
+    fn tick(&self) -> impl Step {
         (
             // Drag sand
             Drag {
@@ -79,20 +79,13 @@ impl Tick for Water {
                 chance: 0.99,
             },
         )
-            .apply(hex, rng, states)
     }
 
-    fn random_tick(
-        &self,
-        hex: &Hex,
-        states: &BoardState,
-        rng: &mut SmallRng,
-    ) -> Option<BoardSlice> {
+    fn random_tick(&self) -> impl Step {
         // Evaporate
         Chance {
             to: Set([Steam::id()]),
             chance: 0.01,
         }
-        .apply(hex, rng, states)
     }
 }

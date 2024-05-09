@@ -13,12 +13,11 @@ impl StateInfo for Air {
     const HIDDEN: bool = false;
 }
 
-impl Tick for Air {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Air {
+    fn tick(&self) -> impl Step {
         Chance {
             to: Set([Self::id()]),
             chance: 0.0001,
         }
-        .apply(hex, rng, states)
     }
 }

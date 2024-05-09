@@ -12,4 +12,4 @@ impl StateInfo for Stone {
     const HIDDEN: bool = false;
 }
 
-impl Tick for Stone {}
+impl Behavior for Stone {}

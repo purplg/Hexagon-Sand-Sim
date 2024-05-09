@@ -24,8 +24,8 @@ impl StateInfo for Sand {
     const HIDDEN: bool = false;
 }
 
-impl Tick for Sand {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Sand {
+    fn tick(&self) -> impl Step {
         RandomSwap::adjacent(
             [
                 EdgeDirection::POINTY_BOTTOM_LEFT,
@@ -33,6 +33,5 @@ impl Tick for Sand {
             ],
             [Air::id(), Wind::id(), Steam::id()],
         )
-        .apply(hex, rng, states)
     }
 }

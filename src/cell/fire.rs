@@ -19,8 +19,8 @@ impl StateInfo for Fire {
     const HIDDEN: bool = false;
 }
 
-impl Tick for Fire {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Fire {
+    fn tick(&self) -> impl Step {
         (
             Chance {
                 to: Set([Air::id()]),
@@ -63,7 +63,6 @@ impl Tick for Fire {
                 [Air::id(), Water::id(), Steam::id(), Sand::id()],
             ),
         )
-            .apply(hex, rng, states)
     }
 }
 
@@ -85,8 +84,8 @@ impl StateInfo for Ember {
     const HIDDEN: bool = true;
 }
 
-impl Tick for Ember {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Ember {
+    fn tick(&self) -> impl Step {
         (
             Chance {
                 to: Set([Air::id()]),
@@ -115,6 +114,5 @@ impl Tick for Ember {
                 chance: 0.05,
             },
         )
-            .apply(hex, rng, states)
     }
 }

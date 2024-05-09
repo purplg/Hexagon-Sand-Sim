@@ -1,12 +1,11 @@
 use bevy::prelude::*;
 use hexx::EdgeDirection;
-use rand::Rng;
 use std::fmt::Debug;
 use unique_type_id::UniqueTypeId;
 
 use super::*;
 use crate::behavior::{
-    AssertFn, Chance, Choose, Infect, Nearby, NextTo, RandomSwap, Set, Step, Unless, When,
+    AssertFn, Chance, Choose, Infect, Nearby, NextTo, NotNear, RandomSwap, Set, Step, When,
     WhileConnected,
 };
 
@@ -29,8 +28,8 @@ impl StateInfo for Seed {
     const HIDDEN: bool = false;
 }
 
-impl Tick for Seed {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Seed {
+    fn tick(&self) -> impl Step {
         (
             // Move down
             RandomSwap::adjacent(
@@ -49,7 +48,6 @@ impl Tick for Seed {
                 },
             ),
         )
-            .apply(hex, rng, states)
     }
 }
 
@@ -63,15 +61,13 @@ impl StateInfo for Sapling {
     const COLOR: HexColor = HexColor::Static(Color::DARK_GREEN);
 }
 
-impl Tick for Sapling {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Sapling {
+    fn tick(&self) -> impl Step {
         // Branch when no sand nearby, try to start branching
-        let length = rng.gen_range(10..100);
         (
             WhileConnected {
                 walkable: [Self::id(), Trunk::id(), DeadTrunk::id()],
                 goal: [Sand::id()],
-                distance: length,
                 then: (
                     // If next to Sand or Dead, change to Trunk
                     Nearby::any_adjacent(
@@ -101,7 +97,6 @@ impl Tick for Sapling {
             },
             Set([Trunk::id()]),
         )
-            .apply(hex, rng, states)
     }
 }
 
@@ -116,8 +111,8 @@ impl StateInfo for Trunk {
     const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
-impl Tick for Trunk {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Trunk {
+    fn tick(&self) -> impl Step {
         (
             Nearby::any(
                 [Sand::id(), DeadTrunk::id()],
@@ -132,23 +127,10 @@ impl Tick for Trunk {
             ),
             Nearby::any([Sand::id()], 5, AssertFn(|| false)),
             Choose::half(
-                Unless(
-                    || {
-                        hex.xrange(4)
-                            .any(|hex| states.is_state(hex, [BranchLeft::id()]))
-                    },
-                    Set([BranchLeft::id()]),
-                ),
-                Unless(
-                    || {
-                        hex.xrange(4)
-                            .any(|hex| states.is_state(hex, [BranchRight::id()]))
-                    },
-                    Set([BranchRight::id()]),
-                ),
+                NotNear::any([BranchLeft::id()], 4, Set([BranchLeft::id()])),
+                NotNear::any([BranchRight::id()], 4, Set([BranchRight::id()])),
             ),
         )
-            .apply(hex, rng, states)
     }
 }
 
@@ -161,7 +143,7 @@ impl StateInfo for DeadTrunk {
     const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
-impl Tick for DeadTrunk {}
+impl Behavior for DeadTrunk {}
 
 #[derive(Debug, UniqueTypeId)]
 #[UniqueTypeIdType = "u32"]
@@ -171,7 +153,12 @@ struct Branch {
 }
 
 impl Step for Branch {
-    fn apply<R: rand::Rng>(self, hex: &Hex, rng: R, states: &BoardState) -> Option<BoardSlice> {
+    fn apply<R: rand::Rng>(
+        self,
+        hex: &Hex,
+        states: &BoardState,
+        rng: &mut R,
+    ) -> Option<BoardSlice> {
         (
             // When next to other tree components, just stop doing anything.
             Nearby::some_adjacent(
@@ -213,7 +200,7 @@ impl Step for Branch {
                 chance: 0.8,
             },
         )
-            .apply(hex, rng, states)
+            .apply(hex, states, rng)
     }
 }
 
@@ -226,13 +213,12 @@ impl StateInfo for BranchLeft {
     const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
-impl Tick for BranchLeft {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for BranchLeft {
+    fn tick(&self) -> impl Step {
         Branch {
             direction: EdgeDirection::POINTY_TOP_LEFT,
             grow_into: Self::id(),
         }
-        .apply(hex, rng, states)
     }
 }
 
@@ -245,13 +231,12 @@ impl StateInfo for BranchRight {
     const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
-impl Tick for BranchRight {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for BranchRight {
+    fn tick(&self) -> impl Step {
         Branch {
             direction: EdgeDirection::POINTY_TOP_RIGHT,
             grow_into: Self::id(),
         }
-        .apply(hex, rng, states)
     }
 }
 
@@ -264,8 +249,8 @@ impl StateInfo for Twig {
     const COLOR: HexColor = HexColor::Static(BROWN);
 }
 
-impl Tick for Twig {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Twig {
+    fn tick(&self) -> impl Step {
         Chance {
             to: Infect {
                 directions: EdgeDirection::ALL_DIRECTIONS,
@@ -274,7 +259,6 @@ impl Tick for Twig {
             },
             chance: 0.1,
         }
-        .apply(hex, rng, states)
     }
 }
 
@@ -287,13 +271,11 @@ impl StateInfo for Leaf {
     const COLOR: HexColor = HexColor::Static(Color::GREEN);
 }
 
-impl Tick for Leaf {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
-        let length = 30;
+impl Behavior for Leaf {
+    fn tick(&self) -> impl Step {
         WhileConnected {
             walkable: [Self::id(), Trunk::id(), DeadTrunk::id()],
             goal: [Sand::id()],
-            distance: length,
             then: (
                 Nearby {
                     nearby: [Self::id()],
@@ -323,6 +305,5 @@ impl Tick for Leaf {
                 },
             ),
         }
-        .apply(hex, rng, states)
     }
 }

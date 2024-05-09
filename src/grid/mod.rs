@@ -19,8 +19,6 @@ use bevy::{
 use hexx::*;
 use leafwing_input_manager::prelude::*;
 
-use self::state::HEX_RANGE;
-
 pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {

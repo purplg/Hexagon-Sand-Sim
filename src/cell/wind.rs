@@ -19,8 +19,8 @@ impl StateInfo for Wind {
     const HIDDEN: bool = false;
 }
 
-impl Tick for Wind {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+impl Behavior for Wind {
+    fn tick(&self) -> impl Step {
         (
             // Dissipate
             Chance {
@@ -62,6 +62,5 @@ impl Tick for Wind {
                 [Air::id(), Self::id()],
             ),
         )
-            .apply(hex, rng, states)
     }
 }

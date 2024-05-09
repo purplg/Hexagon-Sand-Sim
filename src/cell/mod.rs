@@ -18,7 +18,7 @@ pub use tree::*;
 
 use std::borrow::Cow;
 
-use crate::behavior::StateId;
+use crate::behavior::{Noop, StateId, Step};
 use crate::grid::BoardState;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
@@ -80,7 +80,7 @@ pub struct CellRegistry {
 impl CellRegistry {
     pub fn add<T>(&mut self, tickable: T)
     where
-        T: StateInfo + Tick + Send + Sync + 'static,
+        T: StateInfo + Behavior + Send + Sync + 'static,
     {
         let id: StateId = T::id();
         if self.inner.contains_key(&id) {
@@ -120,12 +120,41 @@ impl BoardSlice {
 }
 
 pub trait Tick {
-    fn tick(&self, _hex: &Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice> {
-        None
+    fn tick(&self, _hex: &Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice>;
+
+    fn random_tick(
+        &self,
+        _hex: &Hex,
+        _states: &BoardState,
+        _rng: &mut SmallRng,
+    ) -> Option<BoardSlice>;
+}
+
+pub trait Behavior {
+    fn tick(&self) -> impl Step {
+        Noop
     }
 
-    fn random_tick(&self, _hex: &Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice> {
-        None
+    fn random_tick(&self) -> impl Step {
+        Noop
+    }
+}
+
+impl<T> Tick for T
+where
+    T: Behavior,
+{
+    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+        self.tick().apply(hex, states, rng)
+    }
+
+    fn random_tick(
+        &self,
+        hex: &Hex,
+        states: &BoardState,
+        rng: &mut SmallRng,
+    ) -> Option<BoardSlice> {
+        self.random_tick().apply(hex, states, rng)
     }
 }
 
