@@ -8,6 +8,8 @@ mod ui;
 
 use bevy::prelude::*;
 
+
+
 fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -23,5 +25,10 @@ fn main() {
     app.add_plugins(grid::Plugin);
     app.add_plugins(cell::Plugin);
     app.add_plugins(ui::Plugin);
+
+    #[cfg(feature = "fps")]
+    app.add_plugins(bevy_fps_counter::FpsCounterPlugin);
+
     app.run();
 }
+

@@ -43,7 +43,7 @@ fn update_system(world: &mut World) {
         .single(world)
         .clone();
 
-    egui::SidePanel::left("sidepanel").show(egui_ctx.get_mut(), |ui| {
+    egui::SidePanel::right("sidepanel").show(egui_ctx.get_mut(), |ui| {
         ui.add_space(16.);
 
         bevy_inspector::ui_for_resource::<Tooltip>(world, ui);
