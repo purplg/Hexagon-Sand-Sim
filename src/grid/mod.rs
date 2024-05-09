@@ -7,7 +7,7 @@ use std::{
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use noisy_bevy::simplex_noise_2d;
-use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng as _};
+use rand::{rngs::SmallRng, seq::SliceRandom as _, Rng};
 pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
@@ -18,6 +18,8 @@ use bevy::{
 };
 use hexx::*;
 use leafwing_input_manager::prelude::*;
+
+use self::state::HEX_RANGE;
 
 pub(super) struct Plugin;
 
@@ -109,9 +111,13 @@ struct HexEntities(HashMap<Hex, Entity>);
 pub struct HexTexture(Handle<Image>);
 
 /// Generate a fresh board.
-pub fn startup_system(mut commands: Commands, asset_loader: Res<AssetServer>) {
+pub fn startup_system(
+    mut commands: Commands,
+    asset_loader: Res<AssetServer>,
+    rng: ResMut<RngSource>,
+) {
     let states = BoardState::default();
-    let cell_iter = CellIter::new(states.bounds(), 60_000);
+    let cell_iter = RandomPositionIter::new(states.bounds().all_coords().collect(), rng.clone());
     let mut entities = HexEntities::default();
     let texture = HexTexture(asset_loader.load("hex.png"));
     for hex in states.bounds().all_coords() {
@@ -207,51 +213,42 @@ fn tick_system(
 }
 
 #[derive(Resource)]
-pub struct CellIter {
-    positions: Vec<Hex>,
+pub struct RandomPositionIter<Item, Rng: rand::Rng> {
+    /// The positions to iterate over.
+    positions: Vec<Item>,
+
+    /// The current index into [`positions`].
     index: usize,
-    count: usize,
-    chunk_size: usize,
-    rng: SmallRng,
+
+    rng: Rng,
 }
 
-impl CellIter {
-    fn new(bounds: &HexBounds, chunk_size: usize) -> Self {
-        if bounds.radius == 0 {
-            panic!("Cannot iterate over an empty grid.")
-        }
-
+impl<T, Rng: rand::Rng> RandomPositionIter<T, Rng> {
+    pub fn new(positions: Vec<T>, rng: Rng) -> Self {
         let mut iter = Self {
-            positions: bounds.all_coords().collect::<Vec<_>>(),
+            positions,
             index: 0,
-            count: 0,
-            chunk_size,
-            rng: SmallRng::from_entropy(),
+            rng,
         };
         iter.shuffle();
         iter
     }
 
-    fn shuffle(&mut self) {
+    pub fn shuffle(&mut self) {
         self.positions.as_mut_slice().shuffle(&mut self.rng);
     }
 }
 
-impl Iterator for CellIter {
-    type Item = Hex;
+impl<T: Copy, Rng: rand::Rng> Iterator for &mut RandomPositionIter<T, Rng> {
+    type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.count == self.chunk_size {
-            self.count = 0;
-            return None;
-        }
         if self.index >= self.positions.len() {
             self.index = 0;
             self.shuffle();
         }
         let item = self.positions.get(self.index).copied();
         self.index += 1;
-        self.count += 1;
         item
     }
 }
@@ -259,17 +256,30 @@ impl Iterator for CellIter {
 /// System to run the simulation every frame.
 fn sim_system(
     mut states: ResMut<BoardState>,
-    mut positions: ResMut<CellIter>,
+    mut positions: ResMut<RandomPositionIter<Hex, SmallRng>>,
     registry: Res<CellRegistry>,
     mut rng: ResMut<RngSource>,
 ) {
     let rng = &mut **rng;
-    for hex in &mut positions {
+    for hex in positions.take(1000) {
         let state = states.get_current(hex).unwrap();
         let cell = registry.get(state).unwrap();
-        if let Some(slice) = cell.behavior.tick(&hex, &states, rng) {
+
+        cell.behavior
+            .random_tick(&hex, &states, rng)
+            .or_else(|| cell.behavior.tick(&hex, &states, rng))
+            .map(|slice| {
+                states.apply(slice);
+            });
+    }
+
+    for hex in &mut positions.take(20_000) {
+        let state = states.get_current(hex).unwrap();
+        let cell = registry.get(state).unwrap();
+
+        cell.behavior.tick(&hex, &states, rng).map(|slice| {
             states.apply(slice);
-        }
+        });
     }
 }
 
