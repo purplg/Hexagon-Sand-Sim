@@ -16,7 +16,8 @@ use unique_type_id::UniqueTypeId as _;
 use crate::{
     behavior::StateId,
     cell::*,
-    grid::{self, BoardState, SimState, TickRate},
+    grid::{self, BoardState, TickRate},
+    SimState,
 };
 
 static EMPTY_NAME: Cow<'static, str> = Cow::Owned(String::new());

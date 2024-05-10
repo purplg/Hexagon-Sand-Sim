@@ -11,7 +11,7 @@ use rand::{rngs::SmallRng, seq::SliceRandom as _, Rng};
 pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
-use crate::{cell::*, input::Input, rng::RngSource, ui::Palette};
+use crate::{cell::*, input::Input, rng::RngSource, ui::Palette, SimState};
 use bevy::{
     app::MainScheduleOrder, ecs::schedule::ScheduleLabel, math::vec2, prelude::*, utils::HashMap,
     window::PrimaryWindow,
@@ -25,7 +25,6 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         // Adjust the size and layout of the board.
         app.insert_resource(TickRate::new(Duration::from_millis(15)));
-        app.init_state::<SimState>();
         app.add_event::<TickEvent>();
         app.add_event::<FlushEvent>();
 
@@ -79,26 +78,6 @@ struct CellRender;
 /// Cells have been committed to the [`BoardState`].
 #[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
 struct CellPostUpdate;
-
-#[derive(
-    States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect, Resource, InspectorOptions,
-)]
-#[reflect(Resource, InspectorOptions)]
-pub enum SimState {
-    Accelerated,
-    Running,
-    #[default]
-    Paused,
-}
-
-impl SimState {
-    pub fn is_running(&self) -> bool {
-        match self {
-            SimState::Accelerated | SimState::Running => true,
-            SimState::Paused => false,
-        }
-    }
-}
 
 #[derive(Event)]
 struct TickEvent;

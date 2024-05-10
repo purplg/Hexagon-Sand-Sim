@@ -1,7 +1,7 @@
 use bevy::{app::AppExit, prelude::*};
 use leafwing_input_manager::prelude::*;
 
-use crate::grid::SimState;
+use crate::SimState;
 
 pub struct Plugin;
 
