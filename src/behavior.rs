@@ -11,13 +11,9 @@ use crate::grid::{
 
 pub type StateId = TypeId<u32>;
 
-pub trait States: IntoIterator<Item = StateId> + Clone + Debug {}
+type States<const C: usize> = [StateId; C];
 
-impl<T> States for T where T: IntoIterator<Item = StateId> + Clone + Debug {}
-
-pub trait Directions: IntoIterator<Item = EdgeDirection> + Debug {}
-
-impl<T> Directions for T where T: IntoIterator<Item = EdgeDirection> + Debug {}
+type Directions<const C: usize> = [EdgeDirection; C];
 
 /// A mutation of the board caused by a single cell.
 pub trait Step {
@@ -115,9 +111,9 @@ impl Step for Noop {
 ///
 /// If this cell on touching the edge of a screen in any of the
 /// specified direction, then it turns to an [`Air`] state.
-pub struct Offscreen<D: Directions>(pub D);
+pub struct Offscreen<const D: usize>(pub Directions<D>);
 
-impl<D: Directions> Step for Offscreen<D> {
+impl<const D: usize> Step for Offscreen<D> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
@@ -137,7 +133,7 @@ impl<D: Directions> Step for Offscreen<D> {
     }
 }
 
-impl<D: Directions> Debug for Offscreen<D> {
+impl<const D: usize> Debug for Offscreen<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Offscreen({:?})", self.0)
     }
@@ -145,13 +141,13 @@ impl<D: Directions> Debug for Offscreen<D> {
 
 /// Convert other nearby cells into another state on collision.
 #[derive(Debug)]
-pub struct Infect<D: Directions, O: States, I: States> {
-    pub directions: D,
-    pub open: O,
-    pub into: I,
+pub struct Infect<const D: usize, const O: usize, const I: usize> {
+    pub directions: Directions<D>,
+    pub open: States<O>,
+    pub into: States<I>,
 }
 
-impl<D: Directions, O: States, I: States> Step for Infect<D, O, I> {
+impl<const D: usize, const O: usize, const I: usize> Step for Infect<D, O, I> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
@@ -172,13 +168,13 @@ impl<D: Directions, O: States, I: States> Step for Infect<D, O, I> {
 
 /// Like [`Infect`], except both cells turn into the same state.
 #[derive(Debug)]
-pub struct Annihilate<D: Directions, O: States, I: States> {
-    pub directions: D,
-    pub open: O,
-    pub into: I,
+pub struct Annihilate<const D: usize, const O: usize, const I: usize> {
+    pub directions: Directions<D>,
+    pub open: States<O>,
+    pub into: States<I>,
 }
 
-impl<D: Directions, O: States, I: States> Step for Annihilate<D, O, I> {
+impl<const D: usize, const O: usize, const I: usize> Step for Annihilate<D, O, I> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
@@ -198,9 +194,9 @@ impl<D: Directions, O: States, I: States> Step for Annihilate<D, O, I> {
 /// Drag another cell.
 #[derive(Debug)]
 pub struct Drag<const DIR: usize, const O: usize, const D: usize> {
-    pub directions: [EdgeDirection; DIR],
-    pub open: [StateId; O],
-    pub drag: [StateId; D],
+    pub directions: Directions<DIR>,
+    pub open: States<O>,
+    pub drag: States<D>,
 }
 
 impl<const DIR: usize, const O: usize, const D: usize> Step for Drag<DIR, O, D> {
@@ -379,15 +375,15 @@ impl<'a> Step for Message<'a> {
 }
 
 #[derive(Debug)]
-pub struct MaybeNear<S: States, O: Step, X: Step> {
-    states: S,
+pub struct MaybeNear<const S: usize, O: Step, X: Step> {
+    states: States<S>,
     range: u32,
     count: usize,
     then: O,
     otherwise: X,
 }
 
-impl<S: States, O: Step, X: Step> Step for MaybeNear<S, O, X> {
+impl<const S: usize, O: Step, X: Step> Step for MaybeNear<S, O, X> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
@@ -414,8 +410,8 @@ impl<S: States, O: Step, X: Step> Step for MaybeNear<S, O, X> {
     }
 }
 
-impl<S: States, O: Step, X: Step> MaybeNear<S, O, X> {
-    pub fn new(states: S, range: u32, count: usize, then: O, otherwise: X) -> Self {
+impl<const S: usize, O: Step, X: Step> MaybeNear<S, O, X> {
+    pub fn new(states: States<S>, range: u32, count: usize, then: O, otherwise: X) -> Self {
         Self {
             states,
             range,
@@ -425,7 +421,7 @@ impl<S: States, O: Step, X: Step> MaybeNear<S, O, X> {
         }
     }
 
-    pub fn any_adjacent(states: S, then: O, otherwise: X) -> Self {
+    pub fn any_adjacent(states: States<S>, then: O, otherwise: X) -> Self {
         Self {
             states,
             range: 1,
@@ -435,7 +431,7 @@ impl<S: States, O: Step, X: Step> MaybeNear<S, O, X> {
         }
     }
 
-    pub fn any(states: S, range: u32, then: O, otherwise: X) -> Self {
+    pub fn any(states: States<S>, range: u32, then: O, otherwise: X) -> Self {
         Self {
             states,
             range,
@@ -445,7 +441,7 @@ impl<S: States, O: Step, X: Step> MaybeNear<S, O, X> {
         }
     }
 
-    pub fn some_adjacent(states: S, count: usize, then: O, otherwise: X) -> Self {
+    pub fn some_adjacent(states: States<S>, count: usize, then: O, otherwise: X) -> Self {
         Self {
             states,
             range: 1,
@@ -461,8 +457,8 @@ impl<S: States, O: Step, X: Step> MaybeNear<S, O, X> {
 pub struct Near;
 
 impl Near {
-    pub fn new<S: States, O: Step>(
-        states: S,
+    pub fn new<const S: usize, O: Step>(
+        states: States<S>,
         range: u32,
         count: usize,
         then: O,
@@ -470,16 +466,23 @@ impl Near {
         MaybeNear::new(states, range, count, then, Noop)
     }
 
-    pub fn any_adjacent<S: States, O: Step>(states: S, then: O) -> MaybeNear<S, O, Noop> {
+    pub fn any_adjacent<const S: usize, O: Step>(
+        states: States<S>,
+        then: O,
+    ) -> MaybeNear<S, O, Noop> {
         MaybeNear::any_adjacent(states, then, Noop)
     }
 
-    pub fn any<S: States, O: Step>(states: S, range: u32, then: O) -> MaybeNear<S, O, Noop> {
+    pub fn any<const S: usize, O: Step>(
+        states: States<S>,
+        range: u32,
+        then: O,
+    ) -> MaybeNear<S, O, Noop> {
         MaybeNear::any(states, range, then, Noop)
     }
 
-    pub fn some_adjacent<S: States, O: Step>(
-        states: S,
+    pub fn some_adjacent<const S: usize, O: Step>(
+        states: States<S>,
         count: usize,
         then: O,
     ) -> MaybeNear<S, O, Noop> {
@@ -492,8 +495,8 @@ impl Near {
 pub struct NotNear;
 
 impl NotNear {
-    pub fn new<S: States, X: Step>(
-        states: S,
+    pub fn new<const S: usize, X: Step>(
+        states: States<S>,
         range: u32,
         count: usize,
         then: X,
@@ -501,16 +504,23 @@ impl NotNear {
         MaybeNear::new(states, range, count, Noop, then)
     }
 
-    pub fn any_adjacent<S: States, X: Step>(states: S, then: X) -> MaybeNear<S, Noop, X> {
+    pub fn any_adjacent<const S: usize, X: Step>(
+        states: States<S>,
+        then: X,
+    ) -> MaybeNear<S, Noop, X> {
         MaybeNear::any_adjacent(states, Noop, then)
     }
 
-    pub fn any<S: States, X: Step>(states: S, range: u32, then: X) -> MaybeNear<S, Noop, X> {
+    pub fn any<const S: usize, X: Step>(
+        states: States<S>,
+        range: u32,
+        then: X,
+    ) -> MaybeNear<S, Noop, X> {
         MaybeNear::any(states, range, Noop, then)
     }
 
-    pub fn some_adjacent<S: States, X: Step>(
-        states: S,
+    pub fn some_adjacent<const S: usize, X: Step>(
+        states: States<S>,
         count: usize,
         then: X,
     ) -> MaybeNear<S, Noop, X> {
@@ -630,14 +640,14 @@ where
 /// Try to swap with another cell `with_state` in some random `direction`.
 #[derive(Debug)]
 pub struct RandomSwap<const D: usize, const S: usize> {
-    pub directions: [EdgeDirection; D],
-    pub open: [StateId; S],
+    pub directions: Directions<D>,
+    pub open: States<S>,
     pub distance: i32,
     pub try_farthest: bool,
 }
 
-impl<const C: usize, const S: usize> RandomSwap<C, S> {
-    pub fn adjacent(directions: [EdgeDirection; C], open: [StateId; S]) -> Self {
+impl<const D: usize, const S: usize> RandomSwap<D, S> {
+    pub fn adjacent(directions: Directions<D>, open: States<S>) -> Self {
         Self {
             directions,
             open,
@@ -711,9 +721,9 @@ impl Step for Swap {
 
 /// Set the state of a cell
 #[derive(Debug)]
-pub struct Set<I: States>(pub I);
+pub struct Set<const I: usize>(pub States<I>);
 
-impl<I: States> Step for Set<I> {
+impl<const I: usize> Step for Set<I> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
@@ -733,13 +743,13 @@ impl<I: States> Step for Set<I> {
 
 /// Apply `then` while a path is `walkable` to `goal`.
 #[derive(Debug)]
-pub struct WhileConnected<W: States, G: States, S: Step> {
-    pub walkable: W,
-    pub goal: G,
+pub struct WhileConnected<const W: usize, const G: usize, S: Step> {
+    pub walkable: States<W>,
+    pub goal: States<G>,
     pub then: S,
 }
 
-impl<W: States, G: States, S: Step> Step for WhileConnected<W, G, S> {
+impl<const W: usize, const G: usize, S: Step> Step for WhileConnected<W, G, S> {
     fn apply<R: rand::Rng>(
         self,
         start: &Hex,
@@ -770,13 +780,13 @@ impl<W: States, G: States, S: Step> Step for WhileConnected<W, G, S> {
 
 /// Check if next to a cell in a state.
 #[derive(Debug)]
-pub struct NextTo<D: Directions, N: States, S: Step> {
-    pub directions: D,
-    pub next: N,
+pub struct NextTo<const D: usize, const N: usize, S: Step> {
+    pub directions: Directions<D>,
+    pub next: States<N>,
     pub step: S,
 }
 
-impl<D: Directions, N: States, S: Step> Step for NextTo<D, N, S> {
+impl<const D: usize, const N: usize, S: Step> Step for NextTo<D, N, S> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
