@@ -110,7 +110,10 @@ fn tooltip_system(
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let (camera, camera_transform) = camera.single();
+    let Ok((camera, camera_transform)) = camera.get_single() else {
+        return;
+    };
+
     let window = window.single();
     let Some(world_position) = window
         .cursor_position()
