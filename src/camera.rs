@@ -45,23 +45,26 @@ fn cursor_grab(
 }
 
 fn zoom(mut query: Query<&mut OrthographicProjection>, input: Query<&ActionState<Input>>) {
-    let mut camera = query.single_mut();
+    let mut proj = query.single_mut();
     let input = input.single();
     let zoom = input.value(&Input::Zoom);
-    camera.scale += zoom;
+    proj.scale -= zoom * 0.1;
+    if proj.scale < 0.1 {
+        proj.scale = 0.1;
+    }
 }
 
 fn pan(
-    mut query: Query<&mut Transform, With<Camera>>,
+    mut query: Query<(&mut Transform, &OrthographicProjection), With<Camera>>,
     input: Query<&ActionState<Input>>,
     dt: Res<Time>,
 ) {
-    let mut transform = query.single_mut();
+    let (mut transform, proj) = query.single_mut();
     let input = input.single();
     let Some(pan) = input.axis_pair(&Input::Pan) else {
         return;
     };
 
-    transform.translation.x -= pan.x() * dt.delta_seconds() * 100.;
-    transform.translation.y += pan.y() * dt.delta_seconds() * 100.;
+    transform.translation.x -= pan.x() * dt.delta_seconds() * 100. * proj.scale;
+    transform.translation.y += pan.y() * dt.delta_seconds() * 100. * proj.scale;
 }
