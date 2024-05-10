@@ -5,7 +5,7 @@ use unique_type_id::UniqueTypeId;
 
 use super::*;
 use crate::behavior::{
-    AssertFn, Chance, Choose, Infect, Nearby, NextTo, NotNear, RandomSwap, Set, Step, When,
+    AssertFn, Chance, Choose, Infect, Near, NextTo, NotNear, RandomSwap, Set, Step, When,
     WhileConnected,
 };
 
@@ -40,7 +40,7 @@ impl Behavior for Seed {
                 [Air::id(), Wind::id(), Steam::id(), Water::id()],
             ),
             // Only attempt to grow when Sand or Water are nearby.
-            Nearby::any_adjacent(
+            Near::any_adjacent(
                 [Sand::id(), Water::id()],
                 Chance {
                     to: Set([Sapling::id()]),
@@ -70,12 +70,12 @@ impl Behavior for Sapling {
                 goal: [Sand::id()],
                 then: (
                     // If next to Sand or Dead, change to Trunk
-                    Nearby::any_adjacent(
+                    Near::any_adjacent(
                         [Self::id()],
-                        Nearby::any_adjacent([Sand::id(), DeadTrunk::id()], Set([Trunk::id()])),
+                        Near::any_adjacent([Sand::id(), DeadTrunk::id()], Set([Trunk::id()])),
                     ),
                     // If next some trunks, turn into a trunk
-                    Nearby::any_adjacent([Self::id(), Trunk::id()], Set([Trunk::id()])),
+                    Near::any_adjacent([Self::id(), Trunk::id()], Set([Trunk::id()])),
                     // Otherwise, try to grow
                     NextTo {
                         directions: [
@@ -114,7 +114,7 @@ impl StateInfo for Trunk {
 impl Behavior for Trunk {
     fn tick(&self) -> impl Step {
         (
-            Nearby::any(
+            Near::any(
                 [Sand::id(), DeadTrunk::id()],
                 5,
                 (
@@ -125,7 +125,7 @@ impl Behavior for Trunk {
                     AssertFn(|| false),
                 ),
             ),
-            Nearby::any([Sand::id()], 5, AssertFn(|| false)),
+            Near::any([Sand::id()], 5, AssertFn(|| false)),
             Choose::half(
                 NotNear::any([BranchLeft::id()], 4, Set([BranchLeft::id()])),
                 NotNear::any([BranchRight::id()], 4, Set([BranchRight::id()])),
@@ -161,7 +161,7 @@ impl Step for Branch {
     ) -> Option<BoardSlice> {
         (
             // When next to other tree components, just stop doing anything.
-            Nearby::some_adjacent(
+            Near::some_adjacent(
                 [
                     BranchLeft::id(),
                     BranchRight::id(),
@@ -173,7 +173,7 @@ impl Step for Branch {
                 Set([DeadTrunk::id()]),
             ),
             // When near other branches, also stop doing anything
-            Nearby::any(
+            Near::any(
                 [BranchLeft::id(), BranchRight::id()],
                 25,
                 Set([DeadTrunk::id()]),
@@ -277,11 +277,11 @@ impl Behavior for Leaf {
             walkable: [Self::id(), Trunk::id(), DeadTrunk::id()],
             goal: [Sand::id()],
             then: (
-                Nearby {
-                    nearby: [Self::id()],
-                    range: 20,
-                    count: 50,
-                    then: (
+                Near::new(
+                    [Self::id()],
+                    20,
+                    50,
+                    (
                         Chance {
                             to: Infect {
                                 directions: EdgeDirection::ALL_DIRECTIONS,
@@ -292,17 +292,17 @@ impl Behavior for Leaf {
                         },
                         AssertFn(|| false),
                     ),
-                },
-                Nearby {
-                    nearby: [Twig::id()],
-                    range: 5,
-                    count: 1,
-                    then: Infect {
+                ),
+                Near::new(
+                    [Twig::id()],
+                    5,
+                    1,
+                    Infect {
                         directions: EdgeDirection::ALL_DIRECTIONS,
                         open: [Air::id()],
                         into: [Self::id()],
                     },
-                },
+                ),
             ),
         }
     }

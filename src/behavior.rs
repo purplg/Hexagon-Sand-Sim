@@ -378,83 +378,16 @@ impl<'a> Step for Message<'a> {
     }
 }
 
-/// Apply `then` [`Step`] only if all the `nearby` states are within
-/// `range` of `count` each.
 #[derive(Debug)]
-pub struct Nearby<N: States, S: Step> {
-    pub nearby: N,
-    pub range: u32,
-    pub count: usize,
-    pub then: S,
+pub struct MaybeNear<S: States, O: Step, X: Step> {
+    states: S,
+    range: u32,
+    count: usize,
+    then: O,
+    otherwise: X,
 }
 
-impl<N: States, S: Step> Step for Nearby<N, S> {
-    fn apply<R: rand::Rng>(
-        self,
-        hex: &Hex,
-        states: &BoardState,
-        rng: &mut R,
-    ) -> Option<BoardSlice> {
-        let mut satisfied = 0;
-        for state in self.nearby.clone() {
-            if hex
-                .xrange(self.range)
-                .filter(|hex| states.is_state(*hex, [state]))
-                .count()
-                >= self.count
-            {
-                satisfied += 1;
-            }
-        }
-        let count = self.nearby.into_iter().count();
-        if satisfied == count {
-            self.then.apply(hex, states, rng)
-        } else {
-            None
-        }
-    }
-}
-
-impl<N: States, S: Step> Nearby<N, S> {
-    pub fn any_adjacent(nearby: N, then: S) -> Self {
-        Self {
-            nearby,
-            range: 1,
-            count: 1,
-            then,
-        }
-    }
-
-    pub fn any(nearby: N, range: u32, then: S) -> Self {
-        Self {
-            nearby,
-            range,
-            count: 1,
-            then,
-        }
-    }
-
-    pub fn some_adjacent(nearby: N, count: usize, then: S) -> Self {
-        Self {
-            nearby,
-            range: 1,
-            count,
-            then,
-        }
-    }
-}
-
-/// Apply `then` [`Step`] only if none of the `nearby` states are
-/// within `range` of `count` each.
-#[derive(Debug)]
-pub struct NotNear<N: States, S: Step> {
-    pub states: N,
-    pub range: u32,
-    pub count: usize,
-    pub then: S,
-}
-
-impl<N: States, S: Step> Step for NotNear<N, S> {
+impl<S: States, O: Step, X: Step> Step for MaybeNear<S, O, X> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
@@ -476,37 +409,112 @@ impl<N: States, S: Step> Step for NotNear<N, S> {
         if satisfied == count {
             self.then.apply(hex, states, rng)
         } else {
-            None
+            self.otherwise.apply(hex, states, rng)
         }
     }
 }
 
-impl<N: States, S: Step> NotNear<N, S> {
-    pub fn any_adjacent(states: N, then: S) -> Self {
+impl<S: States, O: Step, X: Step> MaybeNear<S, O, X> {
+    pub fn new(states: S, range: u32, count: usize, then: O, otherwise: X) -> Self {
+        Self {
+            states,
+            range,
+            count,
+            then,
+            otherwise,
+        }
+    }
+
+    pub fn any_adjacent(states: S, then: O, otherwise: X) -> Self {
         Self {
             states,
             range: 1,
             count: 1,
             then,
+            otherwise,
         }
     }
 
-    pub fn any(states: N, range: u32, then: S) -> Self {
+    pub fn any(states: S, range: u32, then: O, otherwise: X) -> Self {
         Self {
             states,
             range,
             count: 1,
             then,
+            otherwise,
         }
     }
 
-    pub fn some_adjacent(states: N, count: usize, then: S) -> Self {
+    pub fn some_adjacent(states: S, count: usize, then: O, otherwise: X) -> Self {
         Self {
             states,
             range: 1,
             count,
             then,
+            otherwise,
         }
+    }
+}
+
+/// Apply `then` [`Step`] only if all the `nearby` states are within
+/// `range` of `count` each.
+pub struct Near;
+
+impl Near {
+    pub fn new<S: States, O: Step>(
+        states: S,
+        range: u32,
+        count: usize,
+        then: O,
+    ) -> MaybeNear<S, O, Noop> {
+        MaybeNear::new(states, range, count, then, Noop)
+    }
+
+    pub fn any_adjacent<S: States, O: Step>(states: S, then: O) -> MaybeNear<S, O, Noop> {
+        MaybeNear::any_adjacent(states, then, Noop)
+    }
+
+    pub fn any<S: States, O: Step>(states: S, range: u32, then: O) -> MaybeNear<S, O, Noop> {
+        MaybeNear::any(states, range, then, Noop)
+    }
+
+    pub fn some_adjacent<S: States, O: Step>(
+        states: S,
+        count: usize,
+        then: O,
+    ) -> MaybeNear<S, O, Noop> {
+        MaybeNear::some_adjacent(states, count, then, Noop)
+    }
+}
+
+/// Apply `then` [`Step`] only if none of the `nearby` states are
+/// within `range` of `count` each.
+pub struct NotNear;
+
+impl NotNear {
+    pub fn new<S: States, X: Step>(
+        states: S,
+        range: u32,
+        count: usize,
+        then: X,
+    ) -> MaybeNear<S, Noop, X> {
+        MaybeNear::new(states, range, count, Noop, then)
+    }
+
+    pub fn any_adjacent<S: States, X: Step>(states: S, then: X) -> MaybeNear<S, Noop, X> {
+        MaybeNear::any_adjacent(states, Noop, then)
+    }
+
+    pub fn any<S: States, X: Step>(states: S, range: u32, then: X) -> MaybeNear<S, Noop, X> {
+        MaybeNear::any(states, range, Noop, then)
+    }
+
+    pub fn some_adjacent<S: States, X: Step>(
+        states: S,
+        count: usize,
+        then: X,
+    ) -> MaybeNear<S, Noop, X> {
+        MaybeNear::some_adjacent(states, count, Noop, then)
     }
 }
 
