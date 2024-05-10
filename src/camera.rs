@@ -21,6 +21,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(Update, cursor_grab);
     }
 }
+
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 }
