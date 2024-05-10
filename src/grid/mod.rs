@@ -27,6 +27,7 @@ impl bevy::prelude::Plugin for Plugin {
         app.insert_resource(TickRate::new(Duration::from_millis(15)));
         app.init_state::<SimState>();
         app.add_event::<TickEvent>();
+        app.add_event::<FlushEvent>();
 
         app.add_systems(
             Startup,
@@ -54,9 +55,12 @@ impl bevy::prelude::Plugin for Plugin {
         app.add_systems(CellUpdate, sim_system.run_if(on_event::<TickEvent>()));
         app.add_systems(
             CellRender,
-            sprite_render_system.run_if(on_event::<TickEvent>()),
+            sprite_render_system.run_if(on_event::<TickEvent>().or_else(on_event::<FlushEvent>())),
         );
-        app.add_systems(CellPostUpdate, flush_system);
+        app.add_systems(
+            CellPostUpdate,
+            flush_system.run_if(on_event::<TickEvent>().or_else(on_event::<FlushEvent>())),
+        );
     }
 }
 
@@ -98,6 +102,9 @@ impl SimState {
 
 #[derive(Event)]
 struct TickEvent;
+
+#[derive(Event)]
+struct FlushEvent;
 
 #[derive(Component)]
 struct HexCell;
@@ -291,6 +298,7 @@ fn flush_system(mut states: ResMut<BoardState>) {
 fn control_system(
     query: Query<&ActionState<Input>>,
     mut tick_event: EventWriter<TickEvent>,
+    mut flush_event: EventWriter<FlushEvent>,
     mut rate: ResMut<TickRate>,
     mut states: ResMut<BoardState>,
     palette: Res<Palette>,
@@ -324,6 +332,7 @@ fn control_system(
                     states.set_next(hex, palette.selected);
                 }
             }
+            flush_event.send(FlushEvent);
         }
     }
 }
