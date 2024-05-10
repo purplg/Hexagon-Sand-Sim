@@ -20,7 +20,7 @@ pub trait Directions: IntoIterator<Item = EdgeDirection> + Debug {}
 impl<T> Directions for T where T: IntoIterator<Item = EdgeDirection> + Debug {}
 
 /// A mutation of the board caused by a single cell.
-pub trait Step: Debug {
+pub trait Step {
     /// Try to generate a [`BoardSlice`] or return `None` if not
     /// applicable.
     fn apply<R: rand::Rng>(
@@ -350,7 +350,7 @@ impl<C: FnOnce() -> bool> Debug for AssertFn<C> {
 #[derive(Debug)]
 pub struct Output<'a, T>(pub &'a str, pub T);
 
-impl<'a, T: Step> Step for Output<'a, T> {
+impl<'a, T: Step + Debug> Step for Output<'a, T> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
@@ -549,8 +549,8 @@ where
 impl<C, T, F> Debug for If<C, T, F>
 where
     C: FnOnce() -> bool,
-    T: Step,
-    F: Step,
+    T: Step + Debug,
+    F: Step + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "If({:?} else {:?})", self.1, self.2)
@@ -585,7 +585,7 @@ where
 impl<C, T> Debug for When<C, T>
 where
     C: FnOnce() -> bool,
-    T: Step,
+    T: Step + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "When({:?})", self.1)
@@ -620,7 +620,7 @@ where
 impl<C, F> Debug for Unless<C, F>
 where
     C: FnOnce() -> bool,
-    F: Step,
+    F: Step + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Unless({:?})", self.1)
