@@ -44,6 +44,7 @@ impl Behavior for Wind {
                 ],
                 [Air::id(), Self::id()],
             ),
+            Set([Air::id()]),
         )
     }
 
