@@ -22,11 +22,6 @@ impl StateInfo for Wind {
 impl Behavior for Wind {
     fn tick(&self) -> impl Step {
         (
-            // Dissipate
-            Chance {
-                to: Set([Air::id()]),
-                chance: 0.01,
-            },
             Offscreen([
                 EdgeDirection::POINTY_LEFT,
                 EdgeDirection::POINTY_BOTTOM_LEFT,
@@ -41,18 +36,6 @@ impl Behavior for Wind {
                 open: [Air::id(), Self::id()],
                 drag: [Water::id(), Fire::id(), Sand::id()],
             },
-            Chance {
-                to: Infect {
-                    directions: [
-                        EdgeDirection::POINTY_LEFT,
-                        EdgeDirection::POINTY_BOTTOM_LEFT,
-                        EdgeDirection::POINTY_TOP_LEFT,
-                    ],
-                    open: [Air::id(), Self::id()],
-                    into: [Self::id()],
-                },
-                chance: 0.01,
-            },
             RandomSwap::adjacent(
                 [
                     EdgeDirection::POINTY_LEFT,
@@ -61,6 +44,23 @@ impl Behavior for Wind {
                 ],
                 [Air::id(), Self::id()],
             ),
+        )
+    }
+
+    fn random_tick(&self) -> impl Step {
+        Choose::half(
+            // Dissipate
+            Set([Air::id()]),
+            // Create more wind
+            Infect {
+                directions: [
+                    EdgeDirection::POINTY_LEFT,
+                    EdgeDirection::POINTY_BOTTOM_LEFT,
+                    EdgeDirection::POINTY_TOP_LEFT,
+                ],
+                open: [Air::id()],
+                into: [Self::id()],
+            },
         )
     }
 }

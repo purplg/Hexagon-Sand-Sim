@@ -1,7 +1,6 @@
 use unique_type_id::UniqueTypeId;
 
 use super::*;
-use crate::behavior::*;
 
 #[derive(UniqueTypeId)]
 #[UniqueTypeIdType = "u32"]
@@ -13,11 +12,4 @@ impl StateInfo for Air {
     const HIDDEN: bool = false;
 }
 
-impl Behavior for Air {
-    fn tick(&self) -> impl Step {
-        Chance {
-            to: Set([Self::id()]),
-            chance: 0.0001,
-        }
-    }
-}
+impl Behavior for Air {}

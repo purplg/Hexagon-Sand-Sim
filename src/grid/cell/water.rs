@@ -85,7 +85,7 @@ impl Behavior for Water {
         // Evaporate
         Chance {
             to: Set([Steam::id()]),
-            chance: 0.01,
+            chance: 0.001,
         }
     }
 }

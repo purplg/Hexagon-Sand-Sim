@@ -22,27 +22,6 @@ impl StateInfo for Fire {
 impl Behavior for Fire {
     fn tick(&self) -> impl Step {
         (
-            Chance {
-                to: Set([Air::id()]),
-                chance: 0.05,
-            },
-            Chance {
-                to: Infect {
-                    directions: EdgeDirection::ALL_DIRECTIONS,
-                    open: [
-                        Seed::id(),
-                        Sapling::id(),
-                        Trunk::id(),
-                        DeadTrunk::id(),
-                        BranchLeft::id(),
-                        BranchRight::id(),
-                        Twig::id(),
-                        Leaf::id(),
-                    ],
-                    into: [Ember::id()],
-                },
-                chance: 0.05,
-            },
             Infect {
                 directions: [
                     EdgeDirection::POINTY_LEFT,
@@ -62,6 +41,32 @@ impl Behavior for Fire {
                 ],
                 [Air::id(), Water::id(), Steam::id(), Sand::id()],
             ),
+        )
+    }
+
+    fn random_tick(&self) -> impl Step {
+        (
+            Chance {
+                to: Set([Air::id()]),
+                chance: 0.5,
+            },
+            Chance {
+                to: Infect {
+                    directions: EdgeDirection::ALL_DIRECTIONS,
+                    open: [
+                        Seed::id(),
+                        Sapling::id(),
+                        Trunk::id(),
+                        DeadTrunk::id(),
+                        BranchLeft::id(),
+                        BranchRight::id(),
+                        Twig::id(),
+                        Leaf::id(),
+                    ],
+                    into: [Ember::id()],
+                },
+                chance: 0.5,
+            },
         )
     }
 }
@@ -86,15 +91,18 @@ impl StateInfo for Ember {
 
 impl Behavior for Ember {
     fn tick(&self) -> impl Step {
+        Annihilate {
+            directions: EdgeDirection::ALL_DIRECTIONS,
+            open: [Water::id()],
+            into: [Steam::id()],
+        }
+    }
+
+    fn random_tick(&self) -> impl Step {
         (
             Chance {
                 to: Set([Air::id()]),
-                chance: 0.005,
-            },
-            Annihilate {
-                directions: EdgeDirection::ALL_DIRECTIONS,
-                open: [Water::id()],
-                into: [Steam::id()],
+                chance: 0.05,
             },
             Chance {
                 to: Infect {
@@ -111,7 +119,12 @@ impl Behavior for Ember {
                     ],
                     into: [Self::id()],
                 },
-                chance: 0.05,
+                chance: 0.5,
+            },
+            Infect {
+                directions: EdgeDirection::ALL_DIRECTIONS,
+                open: [Air::id()],
+                into: [Fire::id()],
             },
         )
     }
