@@ -31,7 +31,10 @@ fn cursor_grab(
 ) {
     let mut window = window.single_mut();
 
-    let state = input.single();
+    let Ok(state) = input.get_single() else {
+        return;
+    };
+
     if state.just_pressed(&Input::Grab) {
         window.cursor.grab_mode = CursorGrabMode::Confined;
         window.cursor.visible = false;

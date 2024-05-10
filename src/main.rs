@@ -7,8 +7,8 @@ mod rng;
 mod ui;
 
 use bevy::prelude::*;
-
-
+use input::Input;
+use leafwing_input_manager::plugin::InputManagerPlugin;
 
 fn main() {
     let mut app = App::new();
@@ -19,6 +19,8 @@ fn main() {
         }),
         ..default()
     }));
+    app.add_plugins(InputManagerPlugin::<Input>::default());
+
     app.add_plugins(rng::Plugin);
     app.add_plugins(camera::Plugin);
     app.add_plugins(input::Plugin);
@@ -31,4 +33,3 @@ fn main() {
 
     app.run();
 }
-

@@ -296,7 +296,7 @@ fn flush_system(mut states: ResMut<BoardState>) {
 /// System to enable user control over the simulation.
 #[allow(clippy::too_many_arguments)]
 fn control_system(
-    query: Query<&ActionState<Input>>,
+    input: Query<&ActionState<Input>>,
     mut tick_event: EventWriter<TickEvent>,
     mut flush_event: EventWriter<FlushEvent>,
     mut rate: ResMut<TickRate>,
@@ -305,7 +305,10 @@ fn control_system(
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let input = query.single();
+    let Ok(input) = input.get_single() else {
+        return;
+    };
+
     if input.just_pressed(&Input::Step) {
         tick_event.send(TickEvent);
     }

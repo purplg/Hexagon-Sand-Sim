@@ -20,7 +20,6 @@ pub enum Input {
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(InputManagerPlugin::<Input>::default());
         app.add_systems(Startup, startup);
         app.add_systems(Update, sim);
         app.add_systems(Update, quit);
