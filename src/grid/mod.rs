@@ -1,3 +1,4 @@
+pub mod cell;
 mod state;
 
 use std::{
@@ -11,7 +12,7 @@ use rand::{rngs::SmallRng, seq::SliceRandom as _, Rng};
 pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
-use crate::{cell::*, input::Input, rng::RngSource, ui::Palette, SimState};
+use crate::{input::Input, rng::RngSource, ui::Palette, SimState};
 use bevy::{
     app::MainScheduleOrder, ecs::schedule::ScheduleLabel, math::vec2, prelude::*, utils::HashMap,
     window::PrimaryWindow,
@@ -19,10 +20,14 @@ use bevy::{
 use hexx::*;
 use leafwing_input_manager::prelude::*;
 
+use self::cell::*;
+
 pub(super) struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(cell::Plugin);
+
         // Adjust the size and layout of the board.
         app.insert_resource(TickRate::new(Duration::from_millis(15)));
         app.add_event::<TickEvent>();

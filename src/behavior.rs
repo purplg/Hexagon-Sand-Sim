@@ -4,9 +4,9 @@ use rand::seq::IteratorRandom;
 use std::fmt::Debug;
 use unique_type_id::{TypeId, UniqueTypeId as _};
 
-use crate::{
+use crate::grid::{
     cell::{Air, BoardSlice},
-    grid::BoardState,
+    BoardState,
 };
 
 pub type StateId = TypeId<u32>;

@@ -2,9 +2,9 @@ use bevy::{prelude::*, utils::HashMap};
 use hexx::*;
 use unique_type_id::UniqueTypeId as _;
 
-use crate::{behavior::StateId, cell::BoardSlice};
+use crate::behavior::StateId;
 
-use super::Air;
+use super::{Air, BoardSlice};
 
 /// Lookup Entity IDs from their position on the board.
 #[derive(Resource, Default, Deref, DerefMut)]

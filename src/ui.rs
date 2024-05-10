@@ -15,8 +15,11 @@ use unique_type_id::UniqueTypeId as _;
 
 use crate::{
     behavior::StateId,
-    cell::*,
-    grid::{self, BoardState, TickRate},
+    grid::{
+        self,
+        cell::{Air, CellRegistry},
+        BoardState, TickRate,
+    },
     SimState,
 };
 

@@ -1,6 +1,5 @@
 pub mod behavior;
 mod camera;
-mod cell;
 mod grid;
 mod input;
 mod rng;
@@ -47,7 +46,6 @@ fn main() {
     app.add_plugins(camera::Plugin);
     app.add_plugins(input::Plugin);
     app.add_plugins(grid::Plugin);
-    app.add_plugins(cell::Plugin);
     app.add_plugins(ui::Plugin);
 
     #[cfg(feature = "fps")]
