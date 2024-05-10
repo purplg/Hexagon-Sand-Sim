@@ -1,6 +1,6 @@
 use hexx::{EdgeDirection, Hex};
 use pathfinding::directed::dijkstra::dijkstra;
-use rand::seq::IteratorRandom;
+use rand::seq::{IteratorRandom, SliceRandom};
 use std::fmt::Debug;
 use unique_type_id::{TypeId, UniqueTypeId as _};
 
@@ -197,13 +197,13 @@ impl<D: Directions, O: States, I: States> Step for Annihilate<D, O, I> {
 
 /// Drag another cell.
 #[derive(Debug)]
-pub struct Drag<Dir: Directions, O: States, D: States> {
-    pub directions: Dir,
-    pub open: O,
-    pub drag: D,
+pub struct Drag<const DIR: usize, const O: usize, const D: usize> {
+    pub directions: [EdgeDirection; DIR],
+    pub open: [StateId; O],
+    pub drag: [StateId; D],
 }
 
-impl<Dir: Directions, O: States, D: States> Step for Drag<Dir, O, D> {
+impl<const DIR: usize, const O: usize, const D: usize> Step for Drag<DIR, O, D> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
@@ -629,15 +629,15 @@ where
 
 /// Try to swap with another cell `with_state` in some random `direction`.
 #[derive(Debug)]
-pub struct RandomSwap<D: Directions, O: States> {
-    pub directions: D,
-    pub open: O,
+pub struct RandomSwap<const D: usize, const S: usize> {
+    pub directions: [EdgeDirection; D],
+    pub open: [StateId; S],
     pub distance: i32,
     pub try_farthest: bool,
 }
 
-impl<D: Directions, S: States> RandomSwap<D, S> {
-    pub fn adjacent(directions: D, open: S) -> Self {
+impl<const C: usize, const S: usize> RandomSwap<C, S> {
+    pub fn adjacent(directions: [EdgeDirection; C], open: [StateId; S]) -> Self {
         Self {
             directions,
             open,
@@ -647,7 +647,7 @@ impl<D: Directions, S: States> RandomSwap<D, S> {
     }
 }
 
-impl<D: Directions, O: States> Step for RandomSwap<D, O> {
+impl<const C: usize, const S: usize> Step for RandomSwap<C, S> {
     fn apply<R: rand::Rng>(
         self,
         hex: &Hex,
@@ -666,17 +666,22 @@ impl<D: Directions, O: States> Step for RandomSwap<D, O> {
     }
 }
 
-impl<D: Directions, O: States> RandomSwap<D, O> {
+impl<const C: usize, const S: usize> RandomSwap<C, S> {
     fn into_components<R: rand::Rng>(
-        self,
+        mut self,
         hex: &Hex,
         rng: &mut R,
         states: &BoardState,
     ) -> Option<((Hex, StateId), (Hex, StateId))> {
-        let to: Hex = (self.directions.into_iter().choose(rng).unwrap() * self.distance) + *hex;
-        states
-            .find_state(to, self.open)
-            .map(|other| ((*hex, other), (to, *states.get_current(*hex).unwrap())))
+        self.directions.as_mut_slice().shuffle(rng);
+        self.directions
+            .into_iter()
+            .map(|dir| *hex + dir)
+            .find_map(|to| {
+                states
+                    .find_state(to, self.open)
+                    .map(|other| ((*hex, other), (to, *states.get_current(*hex).unwrap())))
+            })
     }
 }
 
