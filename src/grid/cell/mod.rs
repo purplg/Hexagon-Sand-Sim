@@ -148,12 +148,7 @@ where
         self.tick().apply(hex, states, rng)
     }
 
-    fn random_tick(
-        &self,
-        hex: Hex,
-        states: &BoardState,
-        rng: &mut SmallRng,
-    ) -> Option<BoardSlice> {
+    fn random_tick(&self, hex: Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         self.random_tick().apply(hex, states, rng)
     }
 }
