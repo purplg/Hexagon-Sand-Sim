@@ -258,21 +258,22 @@ fn sim_system(
         let state = states.get_current(hex).unwrap();
         let cell = registry.get(state).unwrap();
 
-        cell.behavior
+        if let Some(slice) = cell
+            .behavior
             .random_tick(hex, &states, rng)
             .or_else(|| cell.behavior.tick(hex, &states, rng))
-            .map(|slice| {
-                states.apply(slice);
-            });
+        {
+            states.apply(slice);
+        }
     }
 
     for hex in &mut positions.take(20_000) {
         let state = states.get_current(hex).unwrap();
         let cell = registry.get(state).unwrap();
 
-        cell.behavior.tick(hex, &states, rng).map(|slice| {
+        if let Some(slice) = cell.behavior.tick(hex, &states, rng) {
             states.apply(slice);
-        });
+        };
     }
 }
 

@@ -138,7 +138,7 @@ impl BoardState {
         for i in 0..HEX_COUNT as usize {
             self.set_next(
                 Self::index_to_hex(i),
-                buf.read_u8().map(|a| unique_type_id::TypeId(a))?,
+                buf.read_u8().map(unique_type_id::TypeId)?,
             );
         }
         Ok(())

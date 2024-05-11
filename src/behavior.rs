@@ -332,7 +332,7 @@ pub struct MaybeNear<const S: usize, O: Step, X: Step> {
 impl<const S: usize, O: Step, X: Step> Step for MaybeNear<S, O, X> {
     fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
         let mut satisfied = 0;
-        for state in self.states.clone() {
+        for state in self.states {
             if hex
                 .xrange(self.range)
                 .filter(|hex| states.is_state(*hex, [state]))
@@ -398,6 +398,7 @@ impl<const S: usize, O: Step, X: Step> MaybeNear<S, O, X> {
 pub struct Near;
 
 impl Near {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new<const S: usize, O: Step>(
         states: States<S>,
         range: u32,
@@ -436,6 +437,7 @@ impl Near {
 pub struct NotNear;
 
 impl NotNear {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new<const S: usize, X: Step>(
         states: States<S>,
         range: u32,
@@ -723,11 +725,10 @@ impl<const W: usize, const G: usize, S: Step> Step for WhileConnected<W, G, S> {
                     .into_iter()
                     // Only on walkable states
                     .filter(|(hex, _weight)| {
-                        states.is_state(*hex, self.walkable.clone())
-                            || states.is_state(*hex, self.goal.clone())
+                        states.is_state(*hex, self.walkable) || states.is_state(*hex, self.goal)
                     })
             },
-            |hex| states.is_state(*hex, self.goal.clone()),
+            |hex| states.is_state(*hex, self.goal),
         ) {
             self.then.apply(start, states, rng)
         } else {
@@ -749,7 +750,7 @@ impl<const D: usize, const N: usize, S: Step> Step for NextTo<D, N, S> {
         if self
             .directions
             .into_iter()
-            .any(|direction| states.is_state(hex.neighbor(direction), self.next.clone()))
+            .any(|direction| states.is_state(hex.neighbor(direction), self.next))
         {
             self.step.apply(hex, states, rng)
         } else {
