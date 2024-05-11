@@ -22,7 +22,7 @@ impl StateInfo for Fire {
 impl Behavior for Fire {
     fn tick(&self) -> impl Step {
         (
-            Infect {
+            Annihilate {
                 directions: [
                     EdgeDirection::POINTY_LEFT,
                     EdgeDirection::POINTY_RIGHT,
