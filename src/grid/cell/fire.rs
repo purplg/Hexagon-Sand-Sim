@@ -5,7 +5,7 @@ use super::*;
 use crate::behavior::*;
 
 #[derive(UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct Fire;
 
 impl StateInfo for Fire {
@@ -72,7 +72,7 @@ impl Behavior for Fire {
 }
 
 #[derive(UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct Ember;
 
 impl StateInfo for Ember {

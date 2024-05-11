@@ -20,7 +20,7 @@ use crate::{
         cell::{Air, CellRegistry},
         BoardState, TickRate,
     },
-    SimState,
+    GameEvent, SimState,
 };
 
 static EMPTY_NAME: Cow<'static, str> = Cow::Owned(String::new());
@@ -34,12 +34,17 @@ impl bevy::prelude::Plugin for Plugin {
             brush_size: 1,
         });
         app.init_resource::<Tooltip>();
+        app.insert_resource(SaveLocation("/tmp/test".into()));
         app.add_plugins(EguiPlugin);
         app.add_plugins(DefaultInspectorConfigPlugin);
         app.add_systems(Update, update_system);
         app.add_systems(Update, tooltip_system);
     }
 }
+
+#[derive(Reflect, Default, Resource, InspectorOptions, Deref)]
+#[reflect(Resource, InspectorOptions)]
+struct SaveLocation(Cow<'static, str>);
 
 fn update_system(world: &mut World) {
     let mut egui_ctx = world
@@ -84,6 +89,18 @@ fn update_system(world: &mut World) {
                 if ui.button("Clear").clicked() {
                     let mut states = world.resource_mut::<BoardState>();
                     states.clear();
+                }
+            });
+            bevy_inspector::ui_for_resource::<SaveLocation>(world, ui);
+            ui.horizontal_top(|ui| {
+                if ui.button("Save").clicked() {
+                    let filename = world.resource::<SaveLocation>().trim();
+                    world.send_event(GameEvent::Save(filename.to_owned()));
+                }
+
+                if ui.button("Load").clicked() {
+                    let filename = world.resource::<SaveLocation>().trim();
+                    world.send_event(GameEvent::Load(filename.to_owned()));
                 }
             });
         });

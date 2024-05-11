@@ -9,7 +9,7 @@ use crate::grid::{
     BoardState,
 };
 
-pub type StateId = TypeId<u32>;
+pub type StateId = TypeId<u8>;
 
 type States<const C: usize> = [StateId; C];
 

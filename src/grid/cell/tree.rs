@@ -19,7 +19,7 @@ const BROWN: Color = Color::Rgba {
 /// A particle that falls down, and when sand and water are nearby,
 /// turns into a [`Sapling`].
 #[derive(Debug, UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct Seed;
 
 impl StateInfo for Seed {
@@ -54,7 +54,7 @@ impl Behavior for Seed {
 
 /// Grows upward a random height, then turns into a [`Trunk`] when unable to grow anymore.
 #[derive(Debug, UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct Sapling;
 
 impl StateInfo for Sapling {
@@ -104,7 +104,7 @@ impl Behavior for Sapling {
 /// A sapling that doesn't grow upward anymore. It can try to turn
 /// into a branch when no other branches are nearby.
 #[derive(Debug, UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct Trunk;
 
 impl StateInfo for Trunk {
@@ -129,7 +129,7 @@ impl Behavior for Trunk {
 }
 
 #[derive(Debug, UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct DeadTrunk;
 
 impl StateInfo for DeadTrunk {
@@ -140,7 +140,7 @@ impl StateInfo for DeadTrunk {
 impl Behavior for DeadTrunk {}
 
 #[derive(Debug, UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 struct Branch {
     direction: EdgeDirection,
     grow_into: StateId,
@@ -199,7 +199,7 @@ impl Step for Branch {
 }
 
 #[derive(Debug, UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct BranchLeft;
 
 impl StateInfo for BranchLeft {
@@ -217,7 +217,7 @@ impl Behavior for BranchLeft {
 }
 
 #[derive(Debug, UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct BranchRight;
 
 impl StateInfo for BranchRight {
@@ -235,7 +235,7 @@ impl Behavior for BranchRight {
 }
 
 #[derive(Debug, UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct Twig;
 
 impl StateInfo for Twig {
@@ -254,7 +254,7 @@ impl Behavior for Twig {
 }
 
 #[derive(Debug, UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct Leaf;
 
 impl StateInfo for Leaf {

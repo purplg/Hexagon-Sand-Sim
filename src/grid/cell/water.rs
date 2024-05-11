@@ -6,7 +6,7 @@ use super::*;
 use crate::behavior::*;
 
 #[derive(UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct Water;
 
 impl StateInfo for Water {

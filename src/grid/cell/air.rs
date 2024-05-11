@@ -3,7 +3,7 @@ use unique_type_id::UniqueTypeId;
 use super::*;
 
 #[derive(UniqueTypeId)]
-#[UniqueTypeIdType = "u32"]
+#[UniqueTypeIdType = "u8"]
 pub struct Air;
 
 impl StateInfo for Air {

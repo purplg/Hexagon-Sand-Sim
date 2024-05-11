@@ -160,7 +160,7 @@ where
 
 /// Meta information about a state type generally for displaying to
 /// the user.
-pub trait StateInfo: UniqueTypeId<u32> {
+pub trait StateInfo: UniqueTypeId<u8> {
     const NAME: &'static str = "Unknown";
     const COLOR: HexColor = HexColor::Invisible;
     const HIDDEN: bool = true;

@@ -1265,6 +1265,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 
 [[package]]
+name = "bytebuffer"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa7bfaf7cd08cacd74cdc6b521c37ac39cbc92692e5ab5c21ed5657a749b577c"
+dependencies = [
+ "byteorder",
+]
+
+[[package]]
 name = "bytemuck"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3282,6 +3291,7 @@ dependencies = [
  "bevy",
  "bevy-fps-counter",
  "bevy-inspector-egui",
+ "bytebuffer",
  "hexx",
  "leafwing-input-manager",
  "noisy_bevy",

@@ -2,17 +2,19 @@ pub mod cell;
 mod state;
 
 use std::{
+    fs,
     ops::{Deref, DerefMut},
     time::Duration,
 };
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
+use bytebuffer::ByteBuffer;
 use noisy_bevy::simplex_noise_2d;
 use rand::{rngs::SmallRng, seq::SliceRandom as _, Rng};
 pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
-use crate::{input::Input, rng::RngSource, ui::Palette, SimState};
+use crate::{input::Input, rng::RngSource, ui::Palette, GameEvent, SimState};
 use bevy::{
     app::MainScheduleOrder, ecs::schedule::ScheduleLabel, math::vec2, prelude::*, utils::HashMap,
     window::PrimaryWindow,
@@ -48,6 +50,8 @@ impl bevy::prelude::Plugin for Plugin {
             Update,
             tick_system.run_if(|state: Res<State<SimState>>| state.is_running()),
         );
+
+        app.add_systems(Update, save_load_system);
 
         let mut schedule = app.world.resource_mut::<MainScheduleOrder>();
         schedule.insert_after(Update, CellPreUpdate);
@@ -370,5 +374,30 @@ fn sprite_render_system(
             },
             ..default()
         });
+    }
+}
+
+fn save_load_system(
+    mut game_events: EventReader<GameEvent>,
+    mut states: ResMut<BoardState>,
+    mut flush_event: EventWriter<FlushEvent>,
+) {
+    for event in game_events.read() {
+        match event {
+            GameEvent::Save(path) => {
+                let mut buffer = ByteBuffer::new();
+                states.serialize(&mut buffer);
+                let _ = fs::write(path, buffer.as_bytes());
+            }
+            GameEvent::Load(path) => {
+                let Ok(contents) = fs::read(path) else {
+                    return;
+                };
+                let mut buffer = ByteBuffer::from_vec(contents);
+                if states.deserialize(&mut buffer).is_ok() {
+                    flush_event.send(FlushEvent);
+                }
+            }
+        }
     }
 }

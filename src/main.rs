@@ -30,6 +30,12 @@ impl SimState {
     }
 }
 
+#[derive(Event)]
+pub enum GameEvent {
+    Save(String),
+    Load(String),
+}
+
 fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -42,6 +48,7 @@ fn main() {
     app.add_plugins(InputManagerPlugin::<Input>::default());
 
     app.init_state::<SimState>();
+    app.add_event::<GameEvent>();
     app.add_plugins(rng::Plugin);
     app.add_plugins(camera::Plugin);
     app.add_plugins(input::Plugin);

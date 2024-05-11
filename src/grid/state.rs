@@ -1,4 +1,5 @@
 use bevy::{prelude::*, utils::HashMap};
+use bytebuffer::ByteBuffer;
 use hexx::*;
 use unique_type_id::UniqueTypeId as _;
 
@@ -123,6 +124,24 @@ impl BoardState {
     pub fn clear(&mut self) {
         self.current = [Air::id(); HEX_COUNT as usize];
         self.next.clear();
+    }
+}
+
+impl BoardState {
+    pub fn serialize(&self, buf: &mut ByteBuffer) {
+        for state in self.current {
+            buf.write_u8(state.0);
+        }
+    }
+
+    pub fn deserialize(&mut self, buf: &mut ByteBuffer) -> Result<(), std::io::Error> {
+        for i in 0..HEX_COUNT as usize {
+            self.set_next(
+                Self::index_to_hex(i),
+                buf.read_u8().map(|a| unique_type_id::TypeId(a))?,
+            );
+        }
+        Ok(())
     }
 }
 
