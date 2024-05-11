@@ -109,7 +109,7 @@ pub fn startup_system(
     asset_loader: Res<AssetServer>,
     rng: ResMut<RngSource>,
 ) {
-    let states = BoardState::default();
+    let states = BoardState::new(128);
     let cell_iter = RandomPositionIter::new(states.bounds().all_coords().collect(), rng.clone());
     let mut entities = HexEntities::default();
     let texture = HexTexture(asset_loader.load("hex.png"));

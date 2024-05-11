@@ -11,9 +11,6 @@ use super::{Air, BoardSlice};
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct EntityMap(HashMap<Hex, Entity>);
 
-pub const HEX_RANGE: u32 = 128;
-pub const HEX_COUNT: u32 = Hex::range_count(HEX_RANGE);
-
 /// The state of the board.
 #[derive(Resource)]
 pub struct BoardState {
@@ -21,13 +18,31 @@ pub struct BoardState {
     layout: HexLayout,
 
     /// The visible state of the board.
-    current: [StateId; HEX_COUNT as usize],
+    current: Vec<StateId>,
 
     /// The delta for the next frame to be applied when [`Self::tick()`] is called.
     pub next: HashMap<Hex, StateId>,
 }
 
 impl BoardState {
+    pub fn new(size: u32) -> Self {
+        let mut current = Vec::with_capacity(size as usize);
+        let count = Hex::range_count(size);
+        for _ in 0..count {
+            current.push(Air::id());
+        }
+        Self {
+            bounds: HexBounds::new(Hex::default(), size),
+            layout: HexLayout {
+                orientation: HexOrientation::Pointy,
+                hex_size: Vec2::ONE * 2.0,
+                ..default()
+            },
+            current,
+            next: Default::default(),
+        }
+    }
+
     pub fn bounds(&self) -> &HexBounds {
         &self.bounds
     }
@@ -40,7 +55,7 @@ impl BoardState {
         self.current
             .iter()
             .enumerate()
-            .map(|(i, id)| (Self::index_to_hex(i), id))
+            .map(|(i, id)| (Self::index_to_hex(i, self.bounds.radius), id))
     }
 
     pub fn count(&self) -> usize {
@@ -51,18 +66,19 @@ impl BoardState {
     pub fn get_current(&self, hex: impl Into<Hex>) -> Option<&StateId> {
         let hex = hex.into();
         if self.bounds.is_in_bounds(hex) {
-            self.current.get(Self::hex_to_index(&hex))
+            self.current
+                .get(Self::hex_to_index(&hex, self.bounds.radius))
         } else {
             None
         }
     }
 
-    fn index_to_hex(i: usize) -> Hex {
-        Hex::from_hexmod_coordinates(i as u32, HEX_RANGE)
+    fn index_to_hex(i: usize, range: u32) -> Hex {
+        Hex::from_hexmod_coordinates(i as u32, range)
     }
 
-    fn hex_to_index(hex: &Hex) -> usize {
-        hex.to_hexmod_coordinates(HEX_RANGE) as usize
+    fn hex_to_index(hex: &Hex, range: u32) -> usize {
+        hex.to_hexmod_coordinates(range) as usize
     }
 
     /// Get the future [`StateId`] of a cell.
@@ -116,46 +132,31 @@ impl BoardState {
     /// Apply all changes in [`Self::next`] to [`Self::current`].
     pub(super) fn commit(&mut self) {
         for (hex, id) in self.next.drain() {
-            let i = Self::hex_to_index(&hex);
+            let i = Self::hex_to_index(&hex, self.bounds.radius);
             self.current[i] = id;
         }
     }
 
     pub fn clear(&mut self) {
-        self.current = [Air::id(); HEX_COUNT as usize];
+        self.current.fill(Air::id());
         self.next.clear();
     }
 }
 
 impl BoardState {
     pub fn serialize(&self, buf: &mut ByteBuffer) {
-        for state in self.current {
+        for state in &self.current {
             buf.write_u8(state.0);
         }
     }
 
     pub fn deserialize(&mut self, buf: &mut ByteBuffer) -> Result<(), std::io::Error> {
-        for i in 0..HEX_COUNT as usize {
+        for i in 0..self.bounds.radius as usize {
             self.set_next(
-                Self::index_to_hex(i),
+                Self::index_to_hex(i, self.bounds.radius),
                 buf.read_u8().map(unique_type_id::TypeId)?,
             );
         }
         Ok(())
-    }
-}
-
-impl Default for BoardState {
-    fn default() -> Self {
-        Self {
-            bounds: HexBounds::new(Hex::default(), HEX_RANGE),
-            layout: HexLayout {
-                orientation: HexOrientation::Pointy,
-                hex_size: Vec2::ONE * 2.0,
-                ..default()
-            },
-            current: [Air::id(); HEX_COUNT as usize],
-            next: Default::default(),
-        }
     }
 }
