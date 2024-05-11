@@ -641,9 +641,17 @@ where
 /// Try to swap with another cell `with_state` in some random `direction`.
 #[derive(Debug)]
 pub struct RandomSwap<const D: usize, const S: usize> {
+    /// The directions that are available to move in.
     pub directions: Directions<D>,
+
+    /// States that are available to swap with.
     pub open: States<S>,
+
+    /// Max distance to move away from the start position.
     pub distance: i32,
+
+    /// When true, try closer positions in the direction of the swap
+    /// until one is available.
     pub collision: bool,
 }
 
