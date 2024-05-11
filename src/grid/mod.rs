@@ -341,25 +341,29 @@ fn sprite_render_system(
     [(); Hex::range_count(64) as usize]: Sized,
 {
     for (hex, id) in &states.next {
-        commands.entity(*entities.get(hex).unwrap()).insert(Sprite {
-            color: match *registry.color(id) {
-                HexColor::Invisible => Color::NONE,
-                HexColor::Static(color) => color,
-                HexColor::Flickering {
-                    base_color,
-                    offset_color,
-                } => Color::Rgba {
+        let mut entity = commands.entity(*entities.get(hex).unwrap());
+        match *registry.color(id) {
+            HexColor::Invisible => entity.remove::<Sprite>(),
+            HexColor::Static(color) => entity.insert(Sprite { color, ..default() }),
+            HexColor::Flickering {
+                base_color,
+                offset_color,
+            } => entity.insert(Sprite {
+                color: Color::Rgba {
                     red: base_color.r() + rng.gen::<f32>() * offset_color.r(),
                     green: base_color.g() + rng.gen::<f32>() * offset_color.g(),
                     blue: base_color.b() + rng.gen::<f32>() * offset_color.b(),
                     alpha: base_color.a() + rng.gen::<f32>() * offset_color.a(),
                 },
-                HexColor::Noise {
-                    base_color,
-                    offset_color,
-                    speed,
-                    scale,
-                } => {
+                ..default()
+            }),
+            HexColor::Noise {
+                base_color,
+                offset_color,
+                speed,
+                scale,
+            } => entity.insert(Sprite {
+                color: {
                     let world_pos = states.layout().hex_to_world_pos(*hex);
                     let pos = vec2(
                         world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
@@ -371,10 +375,10 @@ fn sprite_render_system(
                         blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
                         alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
                     }
-                }
-            },
-            ..default()
-        });
+                },
+                ..default()
+            }),
+        };
     }
 }
 
