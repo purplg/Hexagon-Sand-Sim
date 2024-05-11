@@ -149,7 +149,7 @@ struct Branch {
 impl Step for Branch {
     fn apply<R: rand::Rng>(
         self,
-        hex: &Hex,
+        hex: Hex,
         states: &BoardState,
         rng: &mut R,
     ) -> Option<BoardSlice> {

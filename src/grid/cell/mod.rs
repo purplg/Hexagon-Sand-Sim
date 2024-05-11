@@ -120,11 +120,11 @@ impl BoardSlice {
 }
 
 pub trait Tick {
-    fn tick(&self, _hex: &Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice>;
+    fn tick(&self, _hex: Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice>;
 
     fn random_tick(
         &self,
-        _hex: &Hex,
+        _hex: Hex,
         _states: &BoardState,
         _rng: &mut SmallRng,
     ) -> Option<BoardSlice>;
@@ -144,13 +144,13 @@ impl<T> Tick for T
 where
     T: Behavior,
 {
-    fn tick(&self, hex: &Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
         self.tick().apply(hex, states, rng)
     }
 
     fn random_tick(
         &self,
-        hex: &Hex,
+        hex: Hex,
         states: &BoardState,
         rng: &mut SmallRng,
     ) -> Option<BoardSlice> {

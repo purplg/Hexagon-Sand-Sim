@@ -255,8 +255,8 @@ fn sim_system(
         let cell = registry.get(state).unwrap();
 
         cell.behavior
-            .random_tick(&hex, &states, rng)
-            .or_else(|| cell.behavior.tick(&hex, &states, rng))
+            .random_tick(hex, &states, rng)
+            .or_else(|| cell.behavior.tick(hex, &states, rng))
             .map(|slice| {
                 states.apply(slice);
             });
@@ -266,7 +266,7 @@ fn sim_system(
         let state = states.get_current(hex).unwrap();
         let cell = registry.get(state).unwrap();
 
-        cell.behavior.tick(&hex, &states, rng).map(|slice| {
+        cell.behavior.tick(hex, &states, rng).map(|slice| {
             states.apply(slice);
         });
     }
