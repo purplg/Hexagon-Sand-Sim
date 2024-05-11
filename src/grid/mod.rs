@@ -92,7 +92,7 @@ struct CellPostUpdate;
 struct TickEvent;
 
 #[derive(Event)]
-struct FlushEvent;
+pub struct FlushEvent;
 
 #[derive(Component)]
 struct HexCell;

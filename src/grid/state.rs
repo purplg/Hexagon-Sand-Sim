@@ -138,8 +138,11 @@ impl BoardState {
     }
 
     pub fn clear(&mut self) {
-        self.current.fill(Air::id());
         self.next.clear();
+        for index in 0..self.current.len() {
+            let hex = Self::index_to_hex(index, self.bounds.radius);
+            self.next.insert(hex, Air::id());
+        }
     }
 }
 

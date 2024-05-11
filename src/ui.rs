@@ -16,9 +16,7 @@ use unique_type_id::UniqueTypeId as _;
 use crate::{
     behavior::StateId,
     grid::{
-        self,
-        cell::{Air, CellRegistry},
-        BoardState, TickRate,
+        self, cell::{Air, CellRegistry}, BoardState, FlushEvent, TickRate
     },
     GameEvent, SimState,
 };
@@ -89,6 +87,7 @@ fn update_system(world: &mut World) {
                 if ui.button("Clear").clicked() {
                     let mut states = world.resource_mut::<BoardState>();
                     states.clear();
+                    world.send_event(FlushEvent);
                 }
             });
             bevy_inspector::ui_for_resource::<SaveLocation>(world, ui);
