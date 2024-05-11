@@ -201,13 +201,14 @@ pub struct Drag<const DIR: usize, const O: usize, const D: usize> {
 
 impl<const DIR: usize, const O: usize, const D: usize> Step for Drag<DIR, O, D> {
     fn apply<R: rand::Rng>(
-        self,
+        mut self,
         hex: &Hex,
         states: &BoardState,
         rng: &mut R,
     ) -> Option<BoardSlice> {
+        self.directions.as_mut_slice().shuffle(rng);
         let swap = RandomSwap::adjacent(self.directions, self.open);
-        let ((from, from_id), (to, to_id)) = swap.into_components(hex, rng, states)?;
+        let ((from, from_id), (to, to_id)) = swap.any_direction(*hex, 1, states)?;
         let dir = to.main_direction_to(from);
         let drag = from.neighbor(dir);
         let drag_id = *states.get_current(drag)?;
@@ -643,7 +644,7 @@ pub struct RandomSwap<const D: usize, const S: usize> {
     pub directions: Directions<D>,
     pub open: States<S>,
     pub distance: i32,
-    pub try_farthest: bool,
+    pub collision: bool,
 }
 
 impl<const D: usize, const S: usize> RandomSwap<D, S> {
@@ -652,46 +653,60 @@ impl<const D: usize, const S: usize> RandomSwap<D, S> {
             directions,
             open,
             distance: 1,
-            try_farthest: false,
+            collision: false,
         }
     }
 }
 
-impl<const C: usize, const S: usize> Step for RandomSwap<C, S> {
+impl<const D: usize, const S: usize> Step for RandomSwap<D, S> {
     fn apply<R: rand::Rng>(
-        self,
+        mut self,
         hex: &Hex,
         states: &BoardState,
         rng: &mut R,
     ) -> Option<BoardSlice> {
-        if self.try_farthest {
-            while let Some((from, to)) = self.into_components(hex, rng, states) {
-                return Some(BoardSlice(vec![from, to]));
+        self.directions.as_mut_slice().shuffle(rng);
+        if self.collision {
+            while self.distance > 0 {
+                if let Some(slice) = self
+                    .any_direction(*hex, self.distance, states)
+                    .map(|(from, to)| BoardSlice(vec![from, to]))
+                {
+                    return Some(slice);
+                }
+                self.distance -= 1;
             }
             None
         } else {
-            let (from, to) = self.into_components(hex, rng, states)?;
-            Some(BoardSlice(vec![from, to]))
+            if let Some(slice) = self
+                .any_direction(*hex, self.distance, states)
+                .map(|(from, to)| BoardSlice(vec![from, to]))
+            {
+                return Some(slice);
+            }
+            None
         }
     }
 }
 
-impl<const C: usize, const S: usize> RandomSwap<C, S> {
-    fn into_components<R: rand::Rng>(
-        mut self,
-        hex: &Hex,
-        rng: &mut R,
+impl<const D: usize, const S: usize> RandomSwap<D, S> {
+    fn any_direction(
+        &self,
+        from: Hex,
+        distance: i32,
         states: &BoardState,
     ) -> Option<((Hex, StateId), (Hex, StateId))> {
-        self.directions.as_mut_slice().shuffle(rng);
-        self.directions
-            .into_iter()
-            .map(|dir| *hex + dir)
-            .find_map(|to| {
-                states
-                    .find_state(to, self.open)
-                    .map(|other| ((*hex, other), (to, *states.get_current(*hex).unwrap())))
-            })
+        let from_id = *states.get_current(from).unwrap();
+        for dir in self.directions {
+            let to = from + dir * distance;
+            if let Some(components) = states
+                .find_state(to, self.open)
+                .map(|to_id| ((from, to_id), (to, from_id)))
+            {
+                return Some(components);
+            }
+        }
+        None
     }
 }
 
