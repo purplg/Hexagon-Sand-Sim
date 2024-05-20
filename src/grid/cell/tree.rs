@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+
 use hexx::EdgeDirection;
 use std::fmt::Debug;
 use unique_type_id::UniqueTypeId;
@@ -147,7 +148,7 @@ struct Branch {
 }
 
 impl Step for Branch {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         (
             // When next to other tree components, just stop doing anything.
             Near::some_adjacent(

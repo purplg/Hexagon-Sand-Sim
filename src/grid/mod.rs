@@ -8,13 +8,14 @@ use std::{
 };
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
+use bevy_turborand::{DelegatedRng, GlobalRng};
 use bytebuffer::ByteBuffer;
 use noisy_bevy::simplex_noise_2d;
-use rand::{rngs::SmallRng, seq::SliceRandom as _, Rng};
+use rayon::iter::{ParallelBridge, ParallelIterator};
 pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
-use crate::{input::Input, rng::RngSource, ui::Palette, GameEvent, SimState};
+use crate::{input::Input, ui::Palette, GameEvent, SimState};
 use bevy::{
     app::MainScheduleOrder, ecs::schedule::ScheduleLabel, math::vec2, prelude::*, utils::HashMap,
     window::PrimaryWindow,
@@ -101,13 +102,8 @@ struct HexCell;
 struct HexEntities(HashMap<Hex, Entity>);
 
 /// Generate a fresh board.
-pub fn startup_system(
-    mut commands: Commands,
-    asset_loader: Res<AssetServer>,
-    rng: ResMut<RngSource>,
-) {
+pub fn startup_system(mut commands: Commands, asset_loader: Res<AssetServer>) {
     let states = BoardState::new(128);
-    let cell_iter = RandomPositionIter::new(states.bounds().all_coords().collect(), rng.clone());
     let mut entities = HexEntities::default();
     let texture = asset_loader.load::<Image>("hex.png");
     for hex in states.bounds().all_coords() {
@@ -124,15 +120,14 @@ pub fn startup_system(
         entity.insert(texture.clone());
     }
     commands.insert_resource(states);
-    commands.insert_resource(cell_iter);
     commands.insert_resource(entities);
 }
 
 /// Generate a fresh board.
-pub fn generate_system(mut states: ResMut<BoardState>, mut rng: ResMut<RngSource>) {
+pub fn generate_system(mut states: ResMut<BoardState>, mut rng: ResMut<GlobalRng>) {
     states.clear();
     for hex in states.bounds().all_coords() {
-        let chance: f32 = rng.gen();
+        let chance = rng.f32();
         let state_id = if chance < 0.25 {
             Sand::id()
         } else if chance < 0.50 {
@@ -201,76 +196,38 @@ fn tick_system(
     }
 }
 
-#[derive(Resource)]
-pub struct RandomPositionIter<Item, Rng: rand::Rng> {
-    /// The positions to iterate over.
-    positions: Vec<Item>,
-
-    /// The current index into [`positions`].
-    index: usize,
-
-    rng: Rng,
-}
-
-impl<T, Rng: rand::Rng> RandomPositionIter<T, Rng> {
-    pub fn new(positions: Vec<T>, rng: Rng) -> Self {
-        let mut iter = Self {
-            positions,
-            index: 0,
-            rng,
-        };
-        iter.shuffle();
-        iter
-    }
-
-    pub fn shuffle(&mut self) {
-        self.positions.as_mut_slice().shuffle(&mut self.rng);
-    }
-}
-
-impl<T: Copy, Rng: rand::Rng> Iterator for &mut RandomPositionIter<T, Rng> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.positions.len() {
-            self.index = 0;
-            self.shuffle();
-        }
-        let item = self.positions.get(self.index).copied();
-        self.index += 1;
-        item
-    }
-}
-
 /// System to run the simulation every frame.
-fn sim_system(
-    mut states: ResMut<BoardState>,
-    mut positions: ResMut<RandomPositionIter<Hex, SmallRng>>,
-    registry: Res<CellRegistry>,
-    mut rng: ResMut<RngSource>,
-) {
-    let rng = &mut **rng;
-    for hex in positions.take(1000) {
-        let state = states.get_current(hex).unwrap();
-        let cell = registry.get(state).unwrap();
+fn sim_system(states: Res<BoardState>, registry: Res<CellRegistry>, mut rng: ResMut<GlobalRng>) {
+    let positions = rng.sample_multiple(&states.positions, 21_000);
 
-        if let Some(slice) = cell
-            .behavior
-            .random_tick(hex, &states, rng)
-            .or_else(|| cell.behavior.tick(hex, &states, rng))
-        {
-            states.apply(slice);
-        }
-    }
+    positions
+        .iter()
+        .map(|hex| (**hex, rng.f32(), rng.f32() < 0.1))
+        .par_bridge()
+        .filter_map(|(hex, rng, do_random_tick)| {
+            let state = states.get_current(hex).unwrap();
+            let cell = registry.get(state).unwrap();
+            if do_random_tick {
+                cell.behavior
+                    .random_tick(hex, &states, rng)
+                    .or_else(|| cell.behavior.tick(hex, &states, rng))
+            } else {
+                cell.behavior.tick(hex, &states, rng)
+            }
+        })
+        .for_each(|mut slice| {
+            if let Ok(next) = states.next.read() {
+                if slice.iter().any(|(hex, _id)| next.contains_key(hex)) {
+                    return;
+                }
+            }
 
-    for hex in &mut positions.take(20_000) {
-        let state = states.get_current(hex).unwrap();
-        let cell = registry.get(state).unwrap();
-
-        if let Some(slice) = cell.behavior.tick(hex, &states, rng) {
-            states.apply(slice);
-        };
-    }
+            if let Ok(mut next) = states.next.write() {
+                for (hex, id) in slice.drain(0..) {
+                    next.insert(hex, id);
+                }
+            }
+        });
 }
 
 /// Move all the queued states into the current state.
@@ -328,53 +285,53 @@ fn control_system(
 /// System to render the cells on the board... using Sprites!
 fn sprite_render_system(
     mut commands: Commands,
-    mut rng: ResMut<RngSource>,
+    mut rng: ResMut<GlobalRng>,
     entities: Res<HexEntities>,
     states: Res<BoardState>,
     registry: Res<CellRegistry>,
     time: Res<Time>,
-) where
-    [(); Hex::range_count(64) as usize]: Sized,
-{
-    for (hex, id) in &states.next {
-        let mut entity = commands.entity(*entities.get(hex).unwrap());
-        match *registry.color(id) {
-            HexColor::Invisible => entity.remove::<Sprite>(),
-            HexColor::Static(color) => entity.insert(Sprite { color, ..default() }),
-            HexColor::Flickering {
-                base_color,
-                offset_color,
-            } => entity.insert(Sprite {
-                color: Color::Rgba {
-                    red: base_color.r() + rng.gen::<f32>() * offset_color.r(),
-                    green: base_color.g() + rng.gen::<f32>() * offset_color.g(),
-                    blue: base_color.b() + rng.gen::<f32>() * offset_color.b(),
-                    alpha: base_color.a() + rng.gen::<f32>() * offset_color.a(),
-                },
-                ..default()
-            }),
-            HexColor::Noise {
-                base_color,
-                offset_color,
-                speed,
-                scale,
-            } => entity.insert(Sprite {
-                color: {
-                    let world_pos = states.layout().hex_to_world_pos(*hex);
-                    let pos = vec2(
-                        world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
-                        world_pos.y * scale.y + time.elapsed_seconds() * speed.y,
-                    );
-                    Color::Rgba {
-                        red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
-                        green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
-                        blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
-                        alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
-                    }
-                },
-                ..default()
-            }),
-        };
+) {
+    if let Ok(next) = states.next.read() {
+        for (hex, id) in next.iter() {
+            let mut entity = commands.entity(*entities.get(hex).unwrap());
+            match *registry.color(id) {
+                HexColor::Invisible => entity.remove::<Sprite>(),
+                HexColor::Static(color) => entity.insert(Sprite { color, ..default() }),
+                HexColor::Flickering {
+                    base_color,
+                    offset_color,
+                } => entity.insert(Sprite {
+                    color: Color::Rgba {
+                        red: base_color.r() + rng.f32() * offset_color.r(),
+                        green: base_color.g() + rng.f32() * offset_color.g(),
+                        blue: base_color.b() + rng.f32() * offset_color.b(),
+                        alpha: base_color.a() + rng.f32() * offset_color.a(),
+                    },
+                    ..default()
+                }),
+                HexColor::Noise {
+                    base_color,
+                    offset_color,
+                    speed,
+                    scale,
+                } => entity.insert(Sprite {
+                    color: {
+                        let world_pos = states.layout().hex_to_world_pos(*hex);
+                        let pos = vec2(
+                            world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
+                            world_pos.y * scale.y + time.elapsed_seconds() * speed.y,
+                        );
+                        Color::Rgba {
+                            red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
+                            green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
+                            blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
+                            alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
+                        }
+                    },
+                    ..default()
+                }),
+            };
+        }
     }
 }
 

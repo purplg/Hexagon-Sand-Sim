@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 use bevy::{prelude::*, utils::HashMap};
 use bytebuffer::ByteBuffer;
 use hexx::*;
@@ -17,11 +19,13 @@ pub struct BoardState {
     bounds: HexBounds,
     layout: HexLayout,
 
+    pub positions: Vec<Hex>,
+
     /// The visible state of the board.
     current: Vec<StateId>,
 
     /// The delta for the next frame to be applied when [`Self::tick()`] is called.
-    pub next: HashMap<Hex, StateId>,
+    pub next: Arc<RwLock<HashMap<Hex, StateId>>>,
 }
 
 impl BoardState {
@@ -31,13 +35,15 @@ impl BoardState {
         for _ in 0..count {
             current.push(Air::id());
         }
+        let bounds = HexBounds::new(Hex::default(), size);
         Self {
-            bounds: HexBounds::new(Hex::default(), size),
+            bounds,
             layout: HexLayout {
                 orientation: HexOrientation::Pointy,
                 hex_size: Vec2::ONE * 2.0,
                 ..default()
             },
+            positions: bounds.all_coords().collect(),
             current,
             next: Default::default(),
         }
@@ -82,15 +88,19 @@ impl BoardState {
     }
 
     /// Get the future [`StateId`] of a cell.
-    pub fn get_next(&self, hex: impl Into<Hex>) -> Option<&StateId> {
+    pub fn get_next(&self, hex: impl Into<Hex>) -> Option<StateId> {
         let hex = hex.into();
-        self.next.get(&hex).or_else(|| self.get_current(hex))
+        self.next
+            .read()
+            .ok()
+            .and_then(|next| next.get(&hex).cloned())
+            .or_else(|| self.get_current(hex).cloned())
     }
 
     /// Return `true` if a `hex` has one of `state`.
     pub fn is_state(&self, hex: Hex, state: impl IntoIterator<Item = StateId>) -> bool {
         self.get_next(hex)
-            .map(|id| state.into_iter().any(|other_id| *id == other_id))
+            .map(|id| state.into_iter().any(|other_id| id == other_id))
             .unwrap_or(false)
     }
 
@@ -103,17 +113,23 @@ impl BoardState {
             state
                 .into_iter()
                 .map(Into::into)
-                .find(|other_id| id == other_id)
+                .find(|other_id| &id == other_id)
         })
     }
 
     /// Set the future state of a cell.
     pub fn set_next(&mut self, hex: Hex, id: StateId) {
-        self.next.insert(hex, id);
+        if let Ok(mut next) = self.next.write() {
+            next.insert(hex, id);
+        }
     }
 
     pub fn is_set(&self, hex: Hex) -> bool {
-        self.next.contains_key(&hex)
+        self.next
+            .read()
+            .map(|next| next.contains_key(&hex))
+            .ok()
+            .unwrap_or_default()
     }
 
     pub fn any_set(&self, hexs: impl IntoIterator<Item = Hex>) -> bool {
@@ -121,27 +137,36 @@ impl BoardState {
     }
 
     pub fn apply(&mut self, mut slice: BoardSlice) {
-        if slice.iter().any(|(hex, _id)| self.next.contains_key(hex)) {
-            return;
+        if let Ok(next) = self.next.read() {
+            if slice.iter().any(|(hex, _id)| next.contains_key(hex)) {
+                return;
+            }
         }
-        for (hex, id) in slice.drain(0..) {
-            self.next.insert(hex, id);
+
+        if let Ok(mut next) = self.next.write() {
+            for (hex, id) in slice.drain(0..) {
+                next.insert(hex, id);
+            }
         }
     }
 
     /// Apply all changes in [`Self::next`] to [`Self::current`].
     pub(super) fn commit(&mut self) {
-        for (hex, id) in self.next.drain() {
-            let i = Self::hex_to_index(&hex, self.bounds.radius);
-            self.current[i] = id;
+        if let Ok(mut next) = self.next.write() {
+            for (hex, id) in next.drain() {
+                let i = Self::hex_to_index(&hex, self.bounds.radius);
+                self.current[i] = id;
+            }
         }
     }
 
     pub fn clear(&mut self) {
-        self.next.clear();
-        for index in 0..self.current.len() {
-            let hex = Self::index_to_hex(index, self.bounds.radius);
-            self.next.insert(hex, Air::id());
+        if let Ok(mut next) = self.next.write() {
+            next.clear();
+            for index in 0..self.current.len() {
+                let hex = Self::index_to_hex(index, self.bounds.radius);
+                next.insert(hex, Air::id());
+            }
         }
     }
 }

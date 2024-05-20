@@ -1,6 +1,5 @@
 use hexx::{EdgeDirection, Hex};
 use pathfinding::directed::dijkstra::dijkstra;
-use rand::seq::{IteratorRandom, SliceRandom};
 use std::fmt::Debug;
 use unique_type_id::{TypeId, UniqueTypeId as _};
 
@@ -19,17 +18,12 @@ type Directions<const C: usize> = [EdgeDirection; C];
 pub trait Step {
     /// Try to generate a [`BoardSlice`] or return `None` if not
     /// applicable.
-    fn apply<R: rand::Rng>(
-        self,
-        _hex: Hex,
-        _states: &BoardState,
-        _rng: &mut R,
-    ) -> Option<BoardSlice>;
+    fn apply(self, _hex: Hex, _states: &BoardState, _rng: f32) -> Option<BoardSlice>;
 }
 
 /// Try first step and if it fails, then try second.
 impl<A: Step, B: Step> Step for (A, B) {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         self.0
             .apply(hex, states, rng)
             .or_else(|| self.1.apply(hex, states, rng))
@@ -38,7 +32,7 @@ impl<A: Step, B: Step> Step for (A, B) {
 
 /// Try first step and if it fails, then try second, and so on...
 impl<A: Step, B: Step, C: Step> Step for (A, B, C) {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         self.0
             .apply(hex, states, rng)
             .or_else(|| self.1.apply(hex, states, rng))
@@ -48,7 +42,7 @@ impl<A: Step, B: Step, C: Step> Step for (A, B, C) {
 
 /// Try first step and if it fails, then try second, and so on...
 impl<A: Step, B: Step, C: Step, D: Step> Step for (A, B, C, D) {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         self.0
             .apply(hex, states, rng)
             .or_else(|| self.1.apply(hex, states, rng))
@@ -59,7 +53,7 @@ impl<A: Step, B: Step, C: Step, D: Step> Step for (A, B, C, D) {
 
 /// Try first step and if it fails, then try second, and so on...
 impl<A: Step, B: Step, C: Step, D: Step, E: Step> Step for (A, B, C, D, E) {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         self.0
             .apply(hex, states, rng)
             .or_else(|| self.1.apply(hex, states, rng))
@@ -77,12 +71,7 @@ impl<A: Step, B: Step, C: Step, D: Step, E: Step> Step for (A, B, C, D, E) {
 pub struct Noop;
 
 impl Step for Noop {
-    fn apply<R: rand::Rng>(
-        self,
-        _hex: Hex,
-        _states: &BoardState,
-        _rng: &mut R,
-    ) -> Option<BoardSlice> {
+    fn apply(self, _hex: Hex, _states: &BoardState, _rng: f32) -> Option<BoardSlice> {
         None
     }
 }
@@ -94,7 +83,7 @@ impl Step for Noop {
 pub struct Offscreen<const D: usize>(pub Directions<D>);
 
 impl<const D: usize> Step for Offscreen<D> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         if self
             .0
             .into_iter()
@@ -123,13 +112,13 @@ pub struct Infect<const D: usize, const O: usize, const I: usize> {
 }
 
 impl<const D: usize, const O: usize, const I: usize> Step for Infect<D, O, I> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
-        let to = hex.neighbor(self.directions.into_iter().choose(rng).unwrap());
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+        let i = (rng * self.directions.len() as f32) as usize;
+        let to = hex.neighbor(self.directions[i]);
         if states.is_state(to, self.open) {
-            Some(BoardSlice(vec![(
-                to,
-                self.into.into_iter().choose(rng).unwrap(),
-            )]))
+            let i = (rng * self.into.len() as f32) as usize;
+            let id = self.into[i];
+            Some(BoardSlice(vec![(to, id)]))
         } else {
             None
         }
@@ -145,10 +134,12 @@ pub struct Annihilate<const D: usize, const O: usize, const I: usize> {
 }
 
 impl<const D: usize, const O: usize, const I: usize> Step for Annihilate<D, O, I> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
-        let to = hex.neighbor(self.directions.into_iter().choose(rng).unwrap());
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+        let i = (rng * self.directions.len() as f32) as usize;
+        let to = hex.neighbor(self.directions[i]);
         if states.is_state(to, self.open) {
-            let id = self.into.into_iter().choose(rng).unwrap();
+            let i = (rng * self.into.len() as f32) as usize;
+            let id = self.into[i];
             Some(BoardSlice(vec![(hex, id), (to, id)]))
         } else {
             None
@@ -165,15 +156,11 @@ pub struct Drag<const DIR: usize, const O: usize, const D: usize> {
 }
 
 impl<const DIR: usize, const O: usize, const D: usize> Step for Drag<DIR, O, D> {
-    fn apply<R: rand::Rng>(
-        mut self,
-        hex: Hex,
-        states: &BoardState,
-        rng: &mut R,
-    ) -> Option<BoardSlice> {
-        self.directions.as_mut_slice().shuffle(rng);
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+        let i = (rng * self.directions.len() as f32) as usize;
+        let direction = self.directions[i];
         let swap = RandomSwap::adjacent(self.directions, self.open);
-        let ((from, from_id), (to, to_id)) = swap.any_direction(hex, 1, states)?;
+        let ((from, from_id), (to, to_id)) = swap.in_direction(hex, direction, 1, states)?;
         let dir = to.main_direction_to(from);
         let drag = from.neighbor(dir);
         let drag_id = *states.get_current(drag)?;
@@ -197,9 +184,8 @@ pub struct Chance<S: Step> {
 }
 
 impl<S: Step> Step for Chance<S> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
-        let attempt = rng.gen::<f32>();
-        if attempt < self.chance {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+        if rng < self.chance {
             self.to.apply(hex, states, rng)
         } else {
             None
@@ -217,8 +203,8 @@ pub struct Choose<A: Step, B: Step> {
 }
 
 impl<A: Step, B: Step> Step for Choose<A, B> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
-        if rng.gen::<f32>() < self.chance {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+        if rng < self.chance {
             self.a.apply(hex, states, rng)
         } else {
             self.b.apply(hex, states, rng)
@@ -243,7 +229,7 @@ impl<A: Step, B: Step> Choose<A, B> {
 pub struct Assert<S: Step>(pub S);
 
 impl<S: Step> Step for Assert<S> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         self.0.apply(hex, states, rng).or(Some(BoardSlice::EMPTY))
     }
 }
@@ -272,12 +258,7 @@ pub struct AssertFn<C: FnOnce() -> bool>(
 );
 
 impl<C: FnOnce() -> bool> Step for AssertFn<C> {
-    fn apply<R: rand::Rng>(
-        self,
-        _hex: Hex,
-        _states: &BoardState,
-        _rng: &mut R,
-    ) -> Option<BoardSlice> {
+    fn apply(self, _hex: Hex, _states: &BoardState, _rng: f32) -> Option<BoardSlice> {
         if self.0() {
             None
         } else {
@@ -298,7 +279,7 @@ impl<C: FnOnce() -> bool> Debug for AssertFn<C> {
 pub struct Output<'a, T>(pub &'a str, pub T);
 
 impl<'a, T: Step + Debug> Step for Output<'a, T> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         println!("{}: {:?}", self.0, self.1);
         self.1.apply(hex, states, rng)
     }
@@ -309,12 +290,7 @@ impl<'a, T: Step + Debug> Step for Output<'a, T> {
 pub struct Message<'a>(pub &'a str);
 
 impl<'a> Step for Message<'a> {
-    fn apply<R: rand::Rng>(
-        self,
-        _hex: Hex,
-        _states: &BoardState,
-        _rng: &mut R,
-    ) -> Option<BoardSlice> {
+    fn apply(self, _hex: Hex, _states: &BoardState, _rng: f32) -> Option<BoardSlice> {
         println!("{}", self.0);
         None
     }
@@ -330,7 +306,7 @@ pub struct MaybeNear<const S: usize, O: Step, X: Step> {
 }
 
 impl<const S: usize, O: Step, X: Step> Step for MaybeNear<S, O, X> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         let mut satisfied = 0;
         for state in self.states {
             if hex
@@ -485,12 +461,7 @@ where
     T: Step,
     F: Step,
 {
-    fn apply<R: rand::Rng>(
-        self,
-        hex: Hex,
-        states: &BoardState,
-        _rng: &mut R,
-    ) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, _rng: f32) -> Option<BoardSlice> {
         if (self.0)() {
             self.1.apply(hex, states, _rng)
         } else {
@@ -521,12 +492,7 @@ where
     C: FnOnce() -> bool,
     T: Step,
 {
-    fn apply<R: rand::Rng>(
-        self,
-        hex: Hex,
-        states: &BoardState,
-        _rng: &mut R,
-    ) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, _rng: f32) -> Option<BoardSlice> {
         if (self.0)() {
             self.1.apply(hex, states, _rng)
         } else {
@@ -556,12 +522,7 @@ where
     C: FnOnce() -> bool,
     F: Step,
 {
-    fn apply<R: rand::Rng>(
-        self,
-        hex: Hex,
-        states: &BoardState,
-        _rng: &mut R,
-    ) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, _rng: f32) -> Option<BoardSlice> {
         if (self.0)() {
             None
         } else {
@@ -609,17 +570,13 @@ impl<const D: usize, const S: usize> RandomSwap<D, S> {
 }
 
 impl<const D: usize, const S: usize> Step for RandomSwap<D, S> {
-    fn apply<R: rand::Rng>(
-        mut self,
-        hex: Hex,
-        states: &BoardState,
-        rng: &mut R,
-    ) -> Option<BoardSlice> {
-        self.directions.as_mut_slice().shuffle(rng);
+    fn apply(mut self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+        let i = (rng * self.directions.len() as f32) as usize;
+        let direction = self.directions[i];
         if self.collision {
             while self.distance > 0 {
                 if let Some(slice) = self
-                    .any_direction(hex, self.distance, states)
+                    .in_direction(hex, direction, self.distance, states)
                     .map(|(from, to)| BoardSlice(vec![from, to]))
                 {
                     return Some(slice);
@@ -629,7 +586,7 @@ impl<const D: usize, const S: usize> Step for RandomSwap<D, S> {
             None
         } else {
             if let Some(slice) = self
-                .any_direction(hex, self.distance, states)
+                .in_direction(hex, direction, self.distance, states)
                 .map(|(from, to)| BoardSlice(vec![from, to]))
             {
                 return Some(slice);
@@ -640,21 +597,20 @@ impl<const D: usize, const S: usize> Step for RandomSwap<D, S> {
 }
 
 impl<const D: usize, const S: usize> RandomSwap<D, S> {
-    fn any_direction(
+    fn in_direction(
         &self,
         from: Hex,
+        direction: EdgeDirection,
         distance: i32,
         states: &BoardState,
     ) -> Option<((Hex, StateId), (Hex, StateId))> {
         let from_id = *states.get_current(from).unwrap();
-        for dir in self.directions {
-            let to = from + dir * distance;
-            if let Some(components) = states
-                .find_state(to, self.open)
-                .map(|to_id| ((from, to_id), (to, from_id)))
-            {
-                return Some(components);
-            }
+        let to = from + direction * distance;
+        if let Some(components) = states
+            .find_state(to, self.open)
+            .map(|to_id| ((from, to_id), (to, from_id)))
+        {
+            return Some(components);
         }
         None
     }
@@ -667,12 +623,7 @@ pub struct Swap {
 }
 
 impl Step for Swap {
-    fn apply<R: rand::Rng>(
-        self,
-        hex: Hex,
-        states: &BoardState,
-        _rng: &mut R,
-    ) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, _rng: f32) -> Option<BoardSlice> {
         if states.any_set([hex, self.other]) {
             None
         } else {
@@ -689,14 +640,13 @@ impl Step for Swap {
 pub struct Set<const I: usize>(pub States<I>);
 
 impl<const I: usize> Step for Set<I> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         if states.any_set([hex]) {
             None
         } else {
-            Some(BoardSlice(vec![(
-                hex,
-                self.0.into_iter().choose(rng).unwrap(),
-            )]))
+            let i = (rng * self.0.len() as f32) as usize;
+            let id = self.0[i];
+            Some(BoardSlice(vec![(hex, id)]))
         }
     }
 }
@@ -710,12 +660,7 @@ pub struct WhileConnected<const W: usize, const G: usize, S: Step> {
 }
 
 impl<const W: usize, const G: usize, S: Step> Step for WhileConnected<W, G, S> {
-    fn apply<R: rand::Rng>(
-        self,
-        start: Hex,
-        states: &BoardState,
-        rng: &mut R,
-    ) -> Option<BoardSlice> {
+    fn apply(self, start: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         if let Some(_path) = dijkstra(
             &start,
             |hex| {
@@ -746,7 +691,7 @@ pub struct NextTo<const D: usize, const N: usize, S: Step> {
 }
 
 impl<const D: usize, const N: usize, S: Step> Step for NextTo<D, N, S> {
-    fn apply<R: rand::Rng>(self, hex: Hex, states: &BoardState, rng: &mut R) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         if self
             .directions
             .into_iter()

@@ -16,8 +16,8 @@ use leafwing_input_manager::plugin::InputManagerPlugin;
 #[reflect(Resource, InspectorOptions)]
 pub enum SimState {
     Accelerated,
-    Running,
     #[default]
+    Running,
     Paused,
 }
 

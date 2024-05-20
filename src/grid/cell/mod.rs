@@ -22,8 +22,8 @@ use crate::behavior::{Noop, StateId, Step};
 use crate::grid::BoardState;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
+use bevy_turborand::rng::Rng;
 use hexx::Hex;
-use rand::rngs::SmallRng;
 
 pub struct Plugin;
 
@@ -120,14 +120,9 @@ impl BoardSlice {
 }
 
 pub trait Tick {
-    fn tick(&self, _hex: Hex, _states: &BoardState, _rng: &mut SmallRng) -> Option<BoardSlice>;
+    fn tick(&self, _hex: Hex, _states: &BoardState, _rng: f32) -> Option<BoardSlice>;
 
-    fn random_tick(
-        &self,
-        _hex: Hex,
-        _states: &BoardState,
-        _rng: &mut SmallRng,
-    ) -> Option<BoardSlice>;
+    fn random_tick(&self, _hex: Hex, _states: &BoardState, _rng: f32) -> Option<BoardSlice>;
 }
 
 pub trait Behavior {
@@ -144,11 +139,11 @@ impl<T> Tick for T
 where
     T: Behavior,
 {
-    fn tick(&self, hex: Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn tick(&self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         self.tick().apply(hex, states, rng)
     }
 
-    fn random_tick(&self, hex: Hex, states: &BoardState, rng: &mut SmallRng) -> Option<BoardSlice> {
+    fn random_tick(&self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         self.random_tick().apply(hex, states, rng)
     }
 }
