@@ -21,47 +21,33 @@ pub trait Step {
     fn apply(self, _hex: Hex, _states: &BoardState, _rng: f32) -> Option<BoardSlice>;
 }
 
-/// Try first step and if it fails, then try second.
-impl<A: Step, B: Step> Step for (A, B) {
-    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
-        self.0
-            .apply(hex, states, rng)
-            .or_else(|| self.1.apply(hex, states, rng))
-    }
+/// Try first [`Step`] in tuple and if it fails, try second, and so
+/// on, until one succeeds.
+macro_rules! impl_step_or {
+    ($first: tt, $($rest: tt),+) => {
+        impl<$first: Step, $($rest: Step),*> Step for ($first, $($rest),*) {
+            fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+                #[allow(non_snake_case)]
+                let ($first, $($rest,)*) = self;
+                $first.apply(hex, states, rng)
+                    $(
+                        .or_else(|| $rest.apply(hex, states, rng))
+                    )*
+            }
+        }
+    };
 }
 
-/// Try first step and if it fails, then try second, and so on...
-impl<A: Step, B: Step, C: Step> Step for (A, B, C) {
-    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
-        self.0
-            .apply(hex, states, rng)
-            .or_else(|| self.1.apply(hex, states, rng))
-            .or_else(|| self.2.apply(hex, states, rng))
-    }
-}
-
-/// Try first step and if it fails, then try second, and so on...
-impl<A: Step, B: Step, C: Step, D: Step> Step for (A, B, C, D) {
-    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
-        self.0
-            .apply(hex, states, rng)
-            .or_else(|| self.1.apply(hex, states, rng))
-            .or_else(|| self.2.apply(hex, states, rng))
-            .or_else(|| self.3.apply(hex, states, rng))
-    }
-}
-
-/// Try first step and if it fails, then try second, and so on...
-impl<A: Step, B: Step, C: Step, D: Step, E: Step> Step for (A, B, C, D, E) {
-    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
-        self.0
-            .apply(hex, states, rng)
-            .or_else(|| self.1.apply(hex, states, rng))
-            .or_else(|| self.2.apply(hex, states, rng))
-            .or_else(|| self.3.apply(hex, states, rng))
-            .or_else(|| self.4.apply(hex, states, rng))
-    }
-}
+impl_step_or!(A, B);
+impl_step_or!(A, B, C);
+impl_step_or!(A, B, C, D);
+impl_step_or!(A, B, C, D, E);
+impl_step_or!(A, B, C, D, E, F);
+impl_step_or!(A, B, C, D, E, F, G);
+impl_step_or!(A, B, C, D, E, F, G, H);
+impl_step_or!(A, B, C, D, E, F, G, H, I);
+impl_step_or!(A, B, C, D, E, F, G, H, I, J);
+impl_step_or!(A, B, C, D, E, F, G, H, I, J, K);
 
 /// Do nothing.
 ///
