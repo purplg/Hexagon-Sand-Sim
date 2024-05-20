@@ -100,9 +100,6 @@ struct HexCell;
 #[derive(Resource, Default, Deref, DerefMut)]
 struct HexEntities(HashMap<Hex, Entity>);
 
-#[derive(Resource, Deref)]
-pub struct HexTexture(Handle<Image>);
-
 /// Generate a fresh board.
 pub fn startup_system(
     mut commands: Commands,
@@ -112,7 +109,7 @@ pub fn startup_system(
     let states = BoardState::new(128);
     let cell_iter = RandomPositionIter::new(states.bounds().all_coords().collect(), rng.clone());
     let mut entities = HexEntities::default();
-    let texture = HexTexture(asset_loader.load("hex.png"));
+    let texture = asset_loader.load::<Image>("hex.png");
     for hex in states.bounds().all_coords() {
         let mut entity = commands.spawn_empty();
         entities.insert(hex, entity.id());
@@ -128,7 +125,6 @@ pub fn startup_system(
     }
     commands.insert_resource(states);
     commands.insert_resource(cell_iter);
-    commands.insert_resource(texture);
     commands.insert_resource(entities);
 }
 
