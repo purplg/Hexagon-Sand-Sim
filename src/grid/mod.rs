@@ -8,7 +8,7 @@ use std::{
 };
 
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
-use bevy_turborand::{DelegatedRng, GlobalRng};
+use bevy_turborand::{DelegatedRng, GlobalRng, RngComponent};
 use bytebuffer::ByteBuffer;
 use noisy_bevy::simplex_noise_2d;
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -139,6 +139,7 @@ pub fn generate_system(mut states: ResMut<BoardState>, mut rng: ResMut<GlobalRng
         };
         states.set_next(hex, state_id);
     }
+    println!("COUNT: {:?}", states.bounds().all_coords().len());
 }
 
 #[derive(Reflect, Resource, Default, InspectorOptions)]
@@ -202,18 +203,12 @@ fn sim_system(states: Res<BoardState>, registry: Res<CellRegistry>, mut rng: Res
 
     positions
         .iter()
-        .map(|hex| (**hex, rng.f32(), rng.f32() < 0.1))
+        .map(|hex| (**hex, rng.f32()))
         .par_bridge()
-        .filter_map(|(hex, rng, do_random_tick)| {
+        .filter_map(|(hex, rng)| {
             let state = states.get_current(hex).unwrap();
             let cell = registry.get(state).unwrap();
-            if do_random_tick {
-                cell.behavior
-                    .random_tick(hex, &states, rng)
-                    .or_else(|| cell.behavior.tick(hex, &states, rng))
-            } else {
-                cell.behavior.tick(hex, &states, rng)
-            }
+            cell.behavior.tick(hex, &states, rng)
         })
         .for_each(|mut slice| {
             if let Ok(next) = states.next.read() {
@@ -284,54 +279,59 @@ fn control_system(
 
 /// System to render the cells on the board... using Sprites!
 fn sprite_render_system(
-    mut commands: Commands,
+    commands: ParallelCommands,
     mut rng: ResMut<GlobalRng>,
     entities: Res<HexEntities>,
     states: Res<BoardState>,
     registry: Res<CellRegistry>,
+    mut cells: Query<&mut RngComponent, With<HexCell>>,
     time: Res<Time>,
 ) {
     if let Ok(next) = states.next.read() {
-        for (hex, id) in next.iter() {
-            let mut entity = commands.entity(*entities.get(hex).unwrap());
-            match *registry.color(id) {
-                HexColor::Invisible => entity.remove::<Sprite>(),
-                HexColor::Static(color) => entity.insert(Sprite { color, ..default() }),
-                HexColor::Flickering {
-                    base_color,
-                    offset_color,
-                } => entity.insert(Sprite {
-                    color: Color::Rgba {
-                        red: base_color.r() + rng.f32() * offset_color.r(),
-                        green: base_color.g() + rng.f32() * offset_color.g(),
-                        blue: base_color.b() + rng.f32() * offset_color.b(),
-                        alpha: base_color.a() + rng.f32() * offset_color.a(),
-                    },
-                    ..default()
-                }),
-                HexColor::Noise {
-                    base_color,
-                    offset_color,
-                    speed,
-                    scale,
-                } => entity.insert(Sprite {
-                    color: {
-                        let world_pos = states.layout().hex_to_world_pos(*hex);
-                        let pos = vec2(
-                            world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
-                            world_pos.y * scale.y + time.elapsed_seconds() * speed.y,
-                        );
-                        Color::Rgba {
-                            red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
-                            green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
-                            blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
-                            alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
-                        }
-                    },
-                    ..default()
-                }),
-            };
-        }
+        next.iter().par_bridge().for_each(|(hex, id)| {
+            commands.command_scope(|mut commands| {
+                let entity_id = *entities.get(hex).unwrap();
+                let mut entity = commands.entity(entity_id);
+                let mut rng = cells.get_mut(entity_id).unwrap();
+                match *registry.color(id) {
+                    HexColor::Invisible => entity.remove::<Sprite>(),
+                    HexColor::Static(color) => entity.insert(Sprite { color, ..default() }),
+                    HexColor::Flickering {
+                        base_color,
+                        offset_color,
+                    } => entity.insert(Sprite {
+                        color: Color::Rgba {
+                            red: base_color.r() + rng.f32() * offset_color.r(),
+                            green: base_color.g() + rng.f32() * offset_color.g(),
+                            blue: base_color.b() + rng.f32() * offset_color.b(),
+                            alpha: base_color.a() + rng.f32() * offset_color.a(),
+                        },
+                        ..default()
+                    }),
+                    HexColor::Noise {
+                        base_color,
+                        offset_color,
+                        speed,
+                        scale,
+                    } => entity.insert(Sprite {
+                        color: {
+                            let world_pos = states.layout().hex_to_world_pos(*hex);
+                            let pos = vec2(
+                                world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
+                                world_pos.y * scale.y + time.elapsed_seconds() * speed.y,
+                            );
+                            Color::Rgba {
+                                red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
+                                green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
+                                blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
+                                alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
+                            }
+                        },
+                        ..default()
+                    }),
+                };
+            });
+        });
     }
 }
 

@@ -31,24 +31,23 @@ impl StateInfo for Seed {
 
 impl Behavior for Seed {
     fn tick(&self) -> impl Step {
-        // Move down
-        RandomSwap::adjacent(
-            [
-                EdgeDirection::POINTY_BOTTOM_LEFT,
-                EdgeDirection::POINTY_BOTTOM_RIGHT,
-            ],
-            [Air::id(), Wind::id(), Steam::id(), Water::id()],
-        )
-    }
-
-    fn random_tick(&self) -> impl Step {
-        // Only attempt to grow when Sand or Water are nearby.
-        Near::any_adjacent(
-            [Sand::id(), Water::id()],
-            Chance {
-                to: Set([Sapling::id()]),
-                chance: 1.,
-            },
+        (
+            // Only attempt to grow when Sand or Water are nearby.
+            Near::any_adjacent(
+                [Sand::id(), Water::id()],
+                Chance {
+                    to: Set([Sapling::id()]),
+                    chance: 1.,
+                },
+            ),
+            // Move down
+            RandomSwap::adjacent(
+                [
+                    EdgeDirection::POINTY_BOTTOM_LEFT,
+                    EdgeDirection::POINTY_BOTTOM_RIGHT,
+                ],
+                [Air::id(), Wind::id(), Steam::id(), Water::id()],
+            ),
         )
     }
 }
@@ -116,16 +115,13 @@ impl StateInfo for Trunk {
 impl Behavior for Trunk {
     fn tick(&self) -> impl Step {
         (
+            Near::any([Sand::id(), DeadTrunk::id()], 5, Set([DeadTrunk::id()])),
             Near::any([Sand::id()], 5, AssertFn(|| false)),
             Choose::half(
                 NotNear::any([BranchLeft::id()], 4, Set([BranchLeft::id()])),
                 NotNear::any([BranchRight::id()], 4, Set([BranchRight::id()])),
             ),
         )
-    }
-
-    fn random_tick(&self) -> impl Step {
-        Near::any([Sand::id(), DeadTrunk::id()], 5, Set([DeadTrunk::id()]))
     }
 }
 
@@ -240,11 +236,14 @@ impl StateInfo for Twig {
 }
 
 impl Behavior for Twig {
-    fn random_tick(&self) -> impl Step {
-        Infect {
-            directions: EdgeDirection::ALL_DIRECTIONS,
-            open: [Air::id()],
-            into: [Leaf::id()],
+    fn tick(&self) -> impl Step {
+        Chance {
+            chance: 0.1,
+            to: Infect {
+                directions: EdgeDirection::ALL_DIRECTIONS,
+                open: [Air::id()],
+                into: [Leaf::id()],
+            },
         }
     }
 }

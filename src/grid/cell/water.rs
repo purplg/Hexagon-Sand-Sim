@@ -32,6 +32,11 @@ impl StateInfo for Water {
 impl Behavior for Water {
     fn tick(&self) -> impl Step {
         (
+            // Evaporate
+            Chance {
+                to: Set([Steam::id()]),
+                chance: 0.001,
+            },
             // Drag sand
             Drag {
                 directions: [
@@ -53,7 +58,7 @@ impl Behavior for Water {
             ),
             // Move through thick materials
             Chance {
-                chance: 0.01,
+                chance: 0.5,
                 to: RandomSwap::adjacent(
                     [
                         EdgeDirection::POINTY_TOP_LEFT,
@@ -79,13 +84,5 @@ impl Behavior for Water {
                 chance: 0.99,
             },
         )
-    }
-
-    fn random_tick(&self) -> impl Step {
-        // Evaporate
-        Chance {
-            to: Set([Steam::id()]),
-            chance: 0.001,
-        }
     }
 }

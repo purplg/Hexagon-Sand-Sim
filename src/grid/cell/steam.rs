@@ -22,6 +22,11 @@ impl StateInfo for Steam {
 impl Behavior for Steam {
     fn tick(&self) -> impl Step {
         (
+            // Condense
+            Chance {
+                to: Set([Water::id()]),
+                chance: 0.1,
+            },
             // Move up
             RandomSwap::adjacent(
                 [
@@ -36,13 +41,5 @@ impl Behavior for Steam {
                 [Air::id(), Water::id(), Fire::id()],
             ),
         )
-    }
-
-    fn random_tick(&self) -> impl Step {
-        // Condense
-        Chance {
-            to: Set([Water::id()]),
-            chance: 0.1,
-        }
     }
 }

@@ -22,30 +22,6 @@ impl StateInfo for Fire {
 impl Behavior for Fire {
     fn tick(&self) -> impl Step {
         (
-            Annihilate {
-                directions: [
-                    EdgeDirection::POINTY_LEFT,
-                    EdgeDirection::POINTY_RIGHT,
-                    EdgeDirection::POINTY_TOP_LEFT,
-                    EdgeDirection::POINTY_TOP_RIGHT,
-                ],
-                open: [Water::id()],
-                into: [Steam::id()],
-            },
-            RandomSwap::adjacent(
-                [
-                    EdgeDirection::POINTY_LEFT,
-                    EdgeDirection::POINTY_RIGHT,
-                    EdgeDirection::POINTY_TOP_LEFT,
-                    EdgeDirection::POINTY_TOP_RIGHT,
-                ],
-                [Air::id(), Water::id(), Steam::id(), Sand::id()],
-            ),
-        )
-    }
-
-    fn random_tick(&self) -> impl Step {
-        (
             Chance {
                 to: Set([Air::id()]),
                 chance: 0.5,
@@ -67,6 +43,25 @@ impl Behavior for Fire {
                 },
                 chance: 0.5,
             },
+            Annihilate {
+                directions: [
+                    EdgeDirection::POINTY_LEFT,
+                    EdgeDirection::POINTY_RIGHT,
+                    EdgeDirection::POINTY_TOP_LEFT,
+                    EdgeDirection::POINTY_TOP_RIGHT,
+                ],
+                open: [Water::id()],
+                into: [Steam::id()],
+            },
+            RandomSwap::adjacent(
+                [
+                    EdgeDirection::POINTY_LEFT,
+                    EdgeDirection::POINTY_RIGHT,
+                    EdgeDirection::POINTY_TOP_LEFT,
+                    EdgeDirection::POINTY_TOP_RIGHT,
+                ],
+                [Air::id(), Water::id(), Steam::id(), Sand::id()],
+            ),
         )
     }
 }
@@ -91,14 +86,6 @@ impl StateInfo for Ember {
 
 impl Behavior for Ember {
     fn tick(&self) -> impl Step {
-        Annihilate {
-            directions: EdgeDirection::ALL_DIRECTIONS,
-            open: [Water::id()],
-            into: [Steam::id()],
-        }
-    }
-
-    fn random_tick(&self) -> impl Step {
         (
             Chance {
                 to: Set([Air::id()]),
@@ -125,6 +112,11 @@ impl Behavior for Ember {
                 directions: EdgeDirection::ALL_DIRECTIONS,
                 open: [Air::id()],
                 into: [Fire::id()],
+            },
+            Annihilate {
+                directions: EdgeDirection::ALL_DIRECTIONS,
+                open: [Water::id()],
+                into: [Steam::id()],
             },
         )
     }
