@@ -118,7 +118,7 @@ impl BoardState {
     }
 
     /// Set the future state of a cell.
-    pub fn set_next(&mut self, hex: Hex, id: StateId) {
+    pub fn set_next(&self, hex: Hex, id: StateId) {
         if let Ok(mut next) = self.next.write() {
             next.insert(hex, id);
         }
