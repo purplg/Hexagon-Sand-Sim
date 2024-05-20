@@ -199,7 +199,7 @@ fn tick_system(
 
 /// System to run the simulation every frame.
 fn sim_system(states: Res<BoardState>, registry: Res<CellRegistry>, mut rng: ResMut<GlobalRng>) {
-    let positions = rng.sample_multiple(&states.positions, 21_000);
+    let positions = rng.sample_multiple(&states.positions, states.bounds().hex_count());
 
     positions
         .iter()
