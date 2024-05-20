@@ -237,7 +237,7 @@ fn control_system(
     mut tick_event: EventWriter<TickEvent>,
     mut flush_event: EventWriter<FlushEvent>,
     mut rate: ResMut<TickRate>,
-    mut states: ResMut<BoardState>,
+    states: Res<BoardState>,
     palette: Res<Palette>,
     camera: Query<(&Camera, &GlobalTransform)>,
     window: Query<&Window, With<PrimaryWindow>>,
@@ -266,11 +266,18 @@ fn control_system(
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
             .map(|ray| ray.origin.truncate())
         {
-            let hex = states.layout().world_pos_to_hex(world_position);
-            for hex in hex.rings(0..palette.brush_size).flatten() {
-                if states.bounds().is_in_bounds(hex) {
-                    states.set_next(hex, palette.selected);
-                }
+            let center = states.layout().world_pos_to_hex(world_position);
+            for hex in center
+                .range(palette.brush_size)
+                .filter(|hex| states.bounds().is_in_bounds(*hex))
+                .filter(|hex| {
+                    states
+                        .get_next(*hex)
+                        .map(|id| id != palette.selected)
+                        .unwrap_or_default()
+                })
+            {
+                states.set_next(hex, palette.selected);
             }
             flush_event.send(FlushEvent);
         }
