@@ -23,7 +23,7 @@ pub trait Step {
 
 /// Try first [`Step`] in tuple and if it fails, try second, and so
 /// on, until one succeeds.
-macro_rules! impl_step_or {
+macro_rules! impl_step_or_tuple {
     ($first: tt, $($rest: tt),+) => {
         impl<$first: Step, $($rest: Step),*> Step for ($first, $($rest),*) {
             fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
@@ -38,16 +38,16 @@ macro_rules! impl_step_or {
     };
 }
 
-impl_step_or!(A, B);
-impl_step_or!(A, B, C);
-impl_step_or!(A, B, C, D);
-impl_step_or!(A, B, C, D, E);
-impl_step_or!(A, B, C, D, E, F);
-impl_step_or!(A, B, C, D, E, F, G);
-impl_step_or!(A, B, C, D, E, F, G, H);
-impl_step_or!(A, B, C, D, E, F, G, H, I);
-impl_step_or!(A, B, C, D, E, F, G, H, I, J);
-impl_step_or!(A, B, C, D, E, F, G, H, I, J, K);
+impl_step_or_tuple!(A, B);
+impl_step_or_tuple!(A, B, C);
+impl_step_or_tuple!(A, B, C, D);
+impl_step_or_tuple!(A, B, C, D, E);
+impl_step_or_tuple!(A, B, C, D, E, F);
+impl_step_or_tuple!(A, B, C, D, E, F, G);
+impl_step_or_tuple!(A, B, C, D, E, F, G, H);
+impl_step_or_tuple!(A, B, C, D, E, F, G, H, I);
+impl_step_or_tuple!(A, B, C, D, E, F, G, H, I, J);
+impl_step_or_tuple!(A, B, C, D, E, F, G, H, I, J, K);
 
 /// Do nothing.
 ///
