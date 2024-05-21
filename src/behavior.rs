@@ -197,11 +197,14 @@ pub struct Choose<A: Step, B: Step> {
 
 impl<A: Step, B: Step> Step for Choose<A, B> {
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
-        if rng < self.chance {
-            self.a.apply(hex, states, rng)
-        } else {
-            self.b.apply(hex, states, rng)
-        }
+        (
+            Chance {
+                to: self.a,
+                chance: self.chance,
+            },
+            self.b,
+        )
+            .apply(hex, states, rng)
     }
 }
 
@@ -499,11 +502,7 @@ where
     T: Step,
 {
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
-        if (self.0)(hex, states, rng) {
-            self.1.apply(hex, states, rng)
-        } else {
-            None
-        }
+        If(self.0, self.1, Noop).apply(hex, states, rng)
     }
 }
 
@@ -529,11 +528,7 @@ where
     F: Step,
 {
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
-        if (self.0)(hex, states, rng) {
-            None
-        } else {
-            self.1.apply(hex, states, rng)
-        }
+        If(self.0, Noop, self.1).apply(hex, states, rng)
     }
 }
 
@@ -669,7 +664,7 @@ pub struct WhileConnected<const W: usize, const G: usize, S: Step> {
 
 impl<const W: usize, const G: usize, S: Step> Step for WhileConnected<W, G, S> {
     fn apply(self, start: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
-        if let Some(_path) = dijkstra(
+        dijkstra(
             &start,
             |hex| {
                 hex.all_neighbors()
@@ -682,11 +677,8 @@ impl<const W: usize, const G: usize, S: Step> Step for WhileConnected<W, G, S> {
                     })
             },
             |hex| states.is_state(*hex, self.goal),
-        ) {
-            self.then.apply(start, states, rng)
-        } else {
-            None
-        }
+        )
+        .map(|_| self.then.apply(start, states, rng))?
     }
 }
 
