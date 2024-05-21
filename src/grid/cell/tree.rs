@@ -168,7 +168,7 @@ impl Step for Branch {
             Choose {
                 // Grow
                 a: When(
-                    || states.is_state(hex.neighbor(self.direction), [Air::id()]),
+                    |hex, states, _rng| states.is_state(hex.neighbor(self.direction), [Air::id()]),
                     Infect {
                         directions: [self.direction],
                         open: [

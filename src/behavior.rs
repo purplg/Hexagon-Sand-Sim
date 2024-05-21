@@ -457,28 +457,28 @@ impl NotNear {
 /// otherwise apply `on_false`.
 pub struct If<C, T, F>(pub C, pub T, pub F)
 where
-    C: FnOnce() -> bool,
+    C: FnOnce(Hex, &BoardState, f32) -> bool,
     T: Step,
     F: Step;
 
-impl<P, T, F> Step for If<P, T, F>
+impl<C, T, F> Step for If<C, T, F>
 where
-    P: FnOnce() -> bool,
+    C: FnOnce(Hex, &BoardState, f32) -> bool,
     T: Step,
     F: Step,
 {
-    fn apply(self, hex: Hex, states: &BoardState, _rng: f32) -> Option<BoardSlice> {
-        if (self.0)() {
-            self.1.apply(hex, states, _rng)
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+        if (self.0)(hex, states, rng) {
+            self.1.apply(hex, states, rng)
         } else {
-            self.2.apply(hex, states, _rng)
+            self.2.apply(hex, states, rng)
         }
     }
 }
 
 impl<C, T, F> Debug for If<C, T, F>
 where
-    C: FnOnce() -> bool,
+    C: FnOnce(Hex, &BoardState, f32) -> bool,
     T: Step + Debug,
     F: Step + Debug,
 {
@@ -490,17 +490,17 @@ where
 /// Conditionally apply `on_true` when condition returns `true`.
 pub struct When<C, T>(pub C, pub T)
 where
-    C: FnOnce() -> bool,
+    C: FnOnce(Hex, &BoardState, f32) -> bool,
     T: Step;
 
 impl<C, T> Step for When<C, T>
 where
-    C: FnOnce() -> bool,
+    C: FnOnce(Hex, &BoardState, f32) -> bool,
     T: Step,
 {
-    fn apply(self, hex: Hex, states: &BoardState, _rng: f32) -> Option<BoardSlice> {
-        if (self.0)() {
-            self.1.apply(hex, states, _rng)
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+        if (self.0)(hex, states, rng) {
+            self.1.apply(hex, states, rng)
         } else {
             None
         }
@@ -509,7 +509,7 @@ where
 
 impl<C, T> Debug for When<C, T>
 where
-    C: FnOnce() -> bool,
+    C: FnOnce(Hex, &BoardState, f32) -> bool,
     T: Step + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -520,26 +520,26 @@ where
 /// Conditionally apply `on_false` when predicate returns `false`.
 pub struct Unless<C, F>(pub C, pub F)
 where
-    C: FnOnce() -> bool,
+    C: FnOnce(Hex, &BoardState, f32) -> bool,
     F: Step;
 
 impl<C, F> Step for Unless<C, F>
 where
-    C: FnOnce() -> bool,
+    C: FnOnce(Hex, &BoardState, f32) -> bool,
     F: Step,
 {
-    fn apply(self, hex: Hex, states: &BoardState, _rng: f32) -> Option<BoardSlice> {
-        if (self.0)() {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+        if (self.0)(hex, states, rng) {
             None
         } else {
-            self.1.apply(hex, states, _rng)
+            self.1.apply(hex, states, rng)
         }
     }
 }
 
 impl<C, F> Debug for Unless<C, F>
 where
-    C: FnOnce() -> bool,
+    C: FnOnce(Hex, &BoardState, f32) -> bool,
     F: Step + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
