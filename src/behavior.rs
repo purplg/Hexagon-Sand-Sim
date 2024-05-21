@@ -266,6 +266,19 @@ impl<C: FnOnce() -> bool> Debug for AssertFn<C> {
     }
 }
 
+/// Do not process anymore steps.
+///
+/// Returns an empty [`BoardSlice`] to trick the tick into thinking a
+/// successful [`Step`] was applied.
+#[derive(Debug)]
+pub struct Stop;
+
+impl Step for Stop {
+    fn apply(self, _hex: Hex, _states: &BoardState, _rng: f32) -> Option<BoardSlice> {
+        Some(BoardSlice::EMPTY)
+    }
+}
+
 /// Print out the type with a prefix message and apply some step while
 /// in a behavior.
 #[derive(Debug)]
