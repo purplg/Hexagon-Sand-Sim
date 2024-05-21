@@ -301,11 +301,18 @@ fn sprite_render_system(
     mut cells: Query<(Entity, &HexPosition, &mut RngComponent), With<HexCell>>,
     time: Res<Time>,
 ) {
+    let Ok(next) = states.next.read() else {
+        return;
+    };
+
     cells.par_iter_mut().for_each(|(entity_id, pos, mut rng)| {
+        if !next.contains_key(&pos.0) {
+            return;
+        }
         commands.command_scope(|mut commands| {
-            let state = states.get_current(pos.0).unwrap();
+            let state = states.get_next(pos.0).unwrap();
             let mut entity = commands.entity(entity_id);
-            match *registry.color(state) {
+            match *registry.color(&state) {
                 HexColor::Invisible => entity.remove::<Sprite>(),
                 HexColor::Static(color) => entity.insert(Sprite { color, ..default() }),
                 HexColor::Flickering {
