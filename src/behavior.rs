@@ -547,8 +547,10 @@ pub struct RandomSwap<const D: usize, const S: usize> {
     pub distance: i32,
 
     /// When true, try closer positions in the direction of the swap
-    /// until one is available.
-    pub collision: bool,
+    /// until one is available. Collision check is not continuous. It
+    /// will check the furthest distance it can travel first and jump
+    /// to furthest open position.
+    pub collide: bool,
 }
 
 impl<const D: usize, const S: usize> RandomSwap<D, S> {
@@ -557,7 +559,7 @@ impl<const D: usize, const S: usize> RandomSwap<D, S> {
             directions,
             open,
             distance: 1,
-            collision: false,
+            collide: false,
         }
     }
 }
@@ -566,7 +568,7 @@ impl<const D: usize, const S: usize> Step for RandomSwap<D, S> {
     fn apply(mut self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         let i = (rng * self.directions.len() as f32) as usize;
         let direction = self.directions[i];
-        if self.collision {
+        if self.collide {
             while self.distance > 0 {
                 if let Some(slice) = self
                     .in_direction(hex, direction, self.distance, states)
