@@ -172,7 +172,14 @@ pub struct Chance<S: Step> {
 impl<S: Step> Step for Chance<S> {
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         if rng < self.chance {
-            self.to.apply(hex, states, rng)
+            self.to.apply(
+                hex,
+                states,
+                // Since we only tick the containing Step when less
+                // than chance, we remap the `rng` value back over the
+                // chance value to be back between 0.0 - 1.0
+                rng / self.chance,
+            )
         } else {
             None
         }
