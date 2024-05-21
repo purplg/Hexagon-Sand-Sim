@@ -109,7 +109,7 @@ fn update_system(world: &mut World) {
         ui.horizontal(|ui| {
             let registry = world.resource::<CellRegistry>().names().collect::<Vec<_>>();
             let mut palette = world.resource_mut::<Palette>();
-            ui.add(egui::Slider::new(&mut palette.brush_size, 1..=100));
+            ui.add(egui::Slider::new(&mut palette.brush_size, 0..=100));
             let mut cells = registry.into_iter().collect::<Vec<_>>();
             cells.sort_by(|(_id_a, name_a), (_id_b, name_b)| name_a.cmp(name_b));
             for (id, name) in cells {
