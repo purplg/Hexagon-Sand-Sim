@@ -98,11 +98,18 @@ pub struct FlushEvent;
 #[derive(Component)]
 struct HexCell;
 
+#[derive(Component, Deref)]
+struct HexPosition(Hex);
+
 #[derive(Resource, Default, Deref, DerefMut)]
 struct HexEntities(HashMap<Hex, Entity>);
 
 /// Generate a fresh board.
-pub fn startup_system(mut commands: Commands, asset_loader: Res<AssetServer>) {
+pub fn startup_system(
+    mut commands: Commands,
+    asset_loader: Res<AssetServer>,
+    mut rng: ResMut<GlobalRng>,
+) {
     let states = BoardState::new(100);
     let mut entities = HexEntities::default();
     let texture = asset_loader.load::<Image>("hex.png");
@@ -110,6 +117,8 @@ pub fn startup_system(mut commands: Commands, asset_loader: Res<AssetServer>) {
         let mut entity = commands.spawn_empty();
         entities.insert(hex, entity.id());
         entity.insert(HexCell);
+        entity.insert(HexPosition(hex));
+        entity.insert(RngComponent::from(&mut rng));
         entity.insert(SpriteBundle {
             transform: Transform::from_translation(
                 states.layout().hex_to_world_pos(hex).extend(0.0),
@@ -287,59 +296,54 @@ fn control_system(
 /// System to render the cells on the board... using Sprites!
 fn sprite_render_system(
     commands: ParallelCommands,
-    mut rng: ResMut<GlobalRng>,
-    entities: Res<HexEntities>,
     states: Res<BoardState>,
     registry: Res<CellRegistry>,
-    mut cells: Query<&mut RngComponent, With<HexCell>>,
+    mut cells: Query<(Entity, &HexPosition, &mut RngComponent), With<HexCell>>,
     time: Res<Time>,
 ) {
-    if let Ok(next) = states.next.read() {
-        next.iter().par_bridge().for_each(|(hex, id)| {
-            commands.command_scope(|mut commands| {
-                let entity_id = *entities.get(hex).unwrap();
-                let mut entity = commands.entity(entity_id);
-                let mut rng = cells.get_mut(entity_id).unwrap();
-                match *registry.color(id) {
-                    HexColor::Invisible => entity.remove::<Sprite>(),
-                    HexColor::Static(color) => entity.insert(Sprite { color, ..default() }),
-                    HexColor::Flickering {
-                        base_color,
-                        offset_color,
-                    } => entity.insert(Sprite {
-                        color: Color::Rgba {
-                            red: base_color.r() + rng.f32() * offset_color.r(),
-                            green: base_color.g() + rng.f32() * offset_color.g(),
-                            blue: base_color.b() + rng.f32() * offset_color.b(),
-                            alpha: base_color.a() + rng.f32() * offset_color.a(),
-                        },
-                        ..default()
-                    }),
-                    HexColor::Noise {
-                        base_color,
-                        offset_color,
-                        speed,
-                        scale,
-                    } => entity.insert(Sprite {
-                        color: {
-                            let world_pos = states.layout().hex_to_world_pos(*hex);
-                            let pos = vec2(
-                                world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
-                                world_pos.y * scale.y + time.elapsed_seconds() * speed.y,
-                            );
-                            Color::Rgba {
-                                red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
-                                green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
-                                blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
-                                alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
-                            }
-                        },
-                        ..default()
-                    }),
-                };
-            });
-        });
-    }
+    cells.par_iter_mut().for_each(|(entity_id, pos, mut rng)| {
+        commands.command_scope(|mut commands| {
+            let state = states.get_current(pos.0).unwrap();
+            let mut entity = commands.entity(entity_id);
+            match *registry.color(state) {
+                HexColor::Invisible => entity.remove::<Sprite>(),
+                HexColor::Static(color) => entity.insert(Sprite { color, ..default() }),
+                HexColor::Flickering {
+                    base_color,
+                    offset_color,
+                } => entity.insert(Sprite {
+                    color: Color::Rgba {
+                        red: base_color.r() + rng.f32() * offset_color.r(),
+                        green: base_color.g() + rng.f32() * offset_color.g(),
+                        blue: base_color.b() + rng.f32() * offset_color.b(),
+                        alpha: base_color.a() + rng.f32() * offset_color.a(),
+                    },
+                    ..default()
+                }),
+                HexColor::Noise {
+                    base_color,
+                    offset_color,
+                    speed,
+                    scale,
+                } => entity.insert(Sprite {
+                    color: {
+                        let world_pos = states.layout().hex_to_world_pos(pos.0);
+                        let pos = vec2(
+                            world_pos.x * scale.x + time.elapsed_seconds() * speed.x,
+                            world_pos.y * scale.y + time.elapsed_seconds() * speed.y,
+                        );
+                        Color::Rgba {
+                            red: base_color.r() + simplex_noise_2d(pos) * offset_color.r(),
+                            green: base_color.g() + simplex_noise_2d(pos) * offset_color.g(),
+                            blue: base_color.b() + simplex_noise_2d(pos) * offset_color.b(),
+                            alpha: base_color.a() + simplex_noise_2d(pos) * offset_color.a(),
+                        }
+                    },
+                    ..default()
+                }),
+            };
+        })
+    });
 }
 
 fn save_load_system(
