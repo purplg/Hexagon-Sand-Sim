@@ -10,12 +10,10 @@ pub struct Fire;
 
 impl StateInfo for Fire {
     const NAME: &'static str = "Fire";
-    const COLOR: HexColor = HexColor::Static(Color::Rgba {
-        red: 1.0,
-        green: 0.0,
-        blue: 0.0,
-        alpha: 1.0,
-    });
+    const COLOR: HexColor = HexColor::Flickering {
+        base_color: Color::RED,
+        offset_color: Color::ORANGE,
+    };
     const HIDDEN: bool = false;
 }
 
