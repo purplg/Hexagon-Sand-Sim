@@ -24,7 +24,7 @@ impl Behavior for Fire {
         (
             Chance {
                 to: Set([Air::id()]),
-                chance: 0.5,
+                chance: 0.1,
             },
             Chance {
                 to: Infect {
