@@ -103,7 +103,7 @@ struct HexEntities(HashMap<Hex, Entity>);
 
 /// Generate a fresh board.
 pub fn startup_system(mut commands: Commands, asset_loader: Res<AssetServer>) {
-    let states = BoardState::new(128);
+    let states = BoardState::new(100);
     let mut entities = HexEntities::default();
     let texture = asset_loader.load::<Image>("hex.png");
     for hex in states.bounds().all_coords() {
