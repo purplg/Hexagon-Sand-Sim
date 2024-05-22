@@ -554,10 +554,7 @@ pub struct RandomSwap<const D: usize, const S: usize> {
     /// Max distance to move away from the start position.
     pub distance: i32,
 
-    /// When true, try closer positions in the direction of the swap
-    /// until one is available. Collision check is not continuous. It
-    /// will check the furthest distance it can travel first and jump
-    /// to furthest open position.
+    /// When true, try the furthest it can through [`self.open`].
     pub collide: bool,
 }
 
@@ -573,20 +570,21 @@ impl<const D: usize, const S: usize> RandomSwap<D, S> {
 }
 
 impl<const D: usize, const S: usize> Step for RandomSwap<D, S> {
-    fn apply(mut self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
+    fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         let i = (rng * self.directions.len() as f32) as usize;
         let direction = self.directions[i];
         if self.collide {
-            while self.distance > 0 {
-                if let Some(slice) = self
-                    .in_direction(hex, direction, self.distance, states)
-                    .map(|(from, to)| BoardSlice(vec![from, to]))
-                {
-                    return Some(slice);
+            let mut check_distance = 1;
+            let mut furthest: Option<((Hex, StateId), (Hex, StateId))> = None;
+            while check_distance <= self.distance {
+                if let Some(set) = self.in_direction(hex, direction, check_distance, states) {
+                    furthest = Some(set);
+                    check_distance += 1;
+                } else {
+                    break;
                 }
-                self.distance -= 1;
             }
-            None
+            furthest.map(|(from, to)| BoardSlice(vec![from, to]))
         } else {
             if let Some(slice) = self
                 .in_direction(hex, direction, self.distance, states)
