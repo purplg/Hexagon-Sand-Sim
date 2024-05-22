@@ -15,7 +15,12 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 pub use state::BoardState;
 use unique_type_id::UniqueTypeId as _;
 
-use crate::{input::Input, ui::Palette, GameEvent, SimState};
+use crate::{
+    grid::cell::{Air, Fire, Sand, Water},
+    input::Input,
+    ui::Palette,
+    GameEvent, SimState,
+};
 use bevy::{
     app::MainScheduleOrder, ecs::schedule::ScheduleLabel, math::vec2, prelude::*, utils::HashMap,
     window::PrimaryWindow,
@@ -23,15 +28,26 @@ use bevy::{
 use hexx::*;
 use leafwing_input_manager::prelude::*;
 
-use self::cell::*;
+use self::cell::{CellRegistry, HexColor};
 
-pub(super) struct Plugin;
+pub(super) struct Plugin {
+    range: u32,
+}
+
+impl Plugin {
+    pub fn new(range: u32) -> Self {
+        Self { range }
+    }
+}
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(cell::Plugin);
 
         // Adjust the size and layout of the board.
+        let states = BoardState::new(self.range);
+        app.insert_resource(states);
+
         app.insert_resource(TickRate::new(Duration::from_millis(15)));
         app.add_event::<TickEvent>();
         app.add_event::<FlushEvent>();
@@ -109,8 +125,8 @@ pub fn startup_system(
     mut commands: Commands,
     asset_loader: Res<AssetServer>,
     mut rng: ResMut<GlobalRng>,
+    states: Res<BoardState>,
 ) {
-    let states = BoardState::new(100);
     let mut entities = HexEntities::default();
     let texture = asset_loader.load::<Image>("hex.png");
     for hex in states.bounds().all_coords() {
@@ -128,7 +144,6 @@ pub fn startup_system(
         });
         entity.insert(texture.clone());
     }
-    commands.insert_resource(states);
     commands.insert_resource(entities);
 }
 

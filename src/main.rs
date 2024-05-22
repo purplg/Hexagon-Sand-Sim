@@ -52,7 +52,7 @@ fn main() {
     app.add_plugins(rng::Plugin);
     app.add_plugins(camera::Plugin);
     app.add_plugins(input::Plugin);
-    app.add_plugins(grid::Plugin);
+    app.add_plugins(grid::Plugin::new(100));
     app.add_plugins(ui::Plugin);
 
     #[cfg(feature = "fps")]

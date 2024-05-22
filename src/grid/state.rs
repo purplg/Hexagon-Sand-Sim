@@ -7,7 +7,7 @@ use unique_type_id::UniqueTypeId as _;
 
 use crate::behavior::StateId;
 
-use super::{Air, BoardSlice};
+use super::{cell::BoardSlice, Air};
 
 /// Lookup Entity IDs from their position on the board.
 #[derive(Resource, Default, Deref, DerefMut)]
