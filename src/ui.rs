@@ -11,6 +11,7 @@ use bevy_inspector_egui::{
     inspector_options::ReflectInspectorOptions,
     DefaultInspectorConfigPlugin, InspectorOptions,
 };
+use leafwing_input_manager::{action_state::ActionState, buttonlike::ButtonState};
 use unique_type_id::UniqueTypeId;
 
 use crate::{
@@ -20,6 +21,7 @@ use crate::{
         cell::{Air, CellRegistry},
         BoardState, FlushEvent, TickRate,
     },
+    input::Input,
     GameEvent, SimState,
 };
 
@@ -43,6 +45,7 @@ impl bevy::prelude::Plugin for Plugin {
         });
 
         app.insert_resource(SaveLocation(Cow::Owned(self.initial_save_location.clone())));
+        app.add_systems(Update, cancel_world_input);
         app.add_systems(Update, update_system);
         app.add_systems(Update, tooltip_system);
     }
@@ -61,6 +64,22 @@ impl Default for Plugin {
 #[derive(Reflect, Default, Resource, InspectorOptions, Deref)]
 #[reflect(Resource, InspectorOptions)]
 struct SaveLocation(Cow<'static, str>);
+
+fn cancel_world_input(world: &mut World) {
+    let mut egui_ctx = world
+        .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
+        .single(world)
+        .clone();
+
+    if egui_ctx.get_mut().is_pointer_over_area() {
+        world
+            .query::<&mut ActionState<Input>>()
+            .single_mut(world)
+            .action_data_mut(&Input::Select)
+            .unwrap()
+            .state = ButtonState::Released;
+    }
+}
 
 fn update_system(world: &mut World) {
     let mut egui_ctx = world
