@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::EdgeDirection;
 
 use super::*;
-use crate::behavior::*;
+use crate::behavior::{StateQuery::*, *};
 
 #[derive(UniqueTypeId)]
 #[UniqueTypeIdType = "u8"]
@@ -34,7 +34,7 @@ impl Behavior for Wind {
                             EdgeDirection::POINTY_BOTTOM_LEFT,
                             EdgeDirection::POINTY_TOP_LEFT,
                         ],
-                        open: [Air::id()],
+                        open: Any([Air::id()]),
                         into: [Self::id()],
                     },
                 ),
@@ -50,8 +50,8 @@ impl Behavior for Wind {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_TOP_LEFT,
                 ],
-                open: [Air::id(), Self::id()],
-                drag: [Water::id(), Fire::id(), Sand::id()],
+                open: Any([Air::id(), Self::id()]),
+                drag: Any([Water::id(), Fire::id(), Sand::id()]),
             },
             RandomSwap::adjacent(
                 [
@@ -59,7 +59,7 @@ impl Behavior for Wind {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_TOP_LEFT,
                 ],
-                [Air::id(), Self::id()],
+                Any([Air::id(), Self::id()]),
             ),
             Set([Air::id()]),
         )

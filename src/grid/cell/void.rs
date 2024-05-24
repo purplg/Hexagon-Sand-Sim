@@ -3,7 +3,7 @@ use hexx::EdgeDirection;
 use unique_type_id::UniqueTypeId;
 
 use super::*;
-use crate::behavior::*;
+use crate::behavior::{StateQuery::*, *};
 
 #[derive(UniqueTypeId)]
 #[UniqueTypeIdType = "u8"]
@@ -18,7 +18,7 @@ impl Behavior for Void {
     fn tick(&self) -> impl Step {
         Infect {
             directions: EdgeDirection::ALL_DIRECTIONS,
-            open: [Water::id(), Sand::id(), Steam::id()],
+            open: Except([Air::id(), Void::id()]),
             into: [Air::id()],
         }
     }

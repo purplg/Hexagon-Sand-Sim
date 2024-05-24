@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::EdgeDirection;
 
 use super::*;
-use crate::behavior::*;
+use crate::behavior::{StateQuery::*, *};
 
 #[derive(UniqueTypeId)]
 #[UniqueTypeIdType = "u8"]
@@ -31,7 +31,7 @@ impl Behavior for Sand {
                 EdgeDirection::POINTY_BOTTOM_LEFT,
                 EdgeDirection::POINTY_BOTTOM_RIGHT,
             ],
-            [Air::id(), Wind::id(), Steam::id()],
+            Any([Air::id(), Sand::id(), Steam::id()]),
         )
     }
 }

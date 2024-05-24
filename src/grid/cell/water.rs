@@ -3,7 +3,7 @@ use hexx::EdgeDirection;
 use unique_type_id::UniqueTypeId;
 
 use super::*;
-use crate::behavior::*;
+use crate::behavior::{StateQuery::*, *};
 
 #[derive(UniqueTypeId)]
 #[UniqueTypeIdType = "u8"]
@@ -38,7 +38,7 @@ impl Behavior for Water {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                [Air::id()],
+                Any([Air::id()]),
             ),
             // Move through thick materials
             Chance {
@@ -48,7 +48,7 @@ impl Behavior for Water {
                         EdgeDirection::POINTY_TOP_LEFT,
                         EdgeDirection::POINTY_TOP_RIGHT,
                     ],
-                    [Sand::id()],
+                    Any([Sand::id()]),
                 ),
             },
             // Below air
@@ -57,7 +57,7 @@ impl Behavior for Water {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                next: [Air::id()],
+                next: Any([Air::id()]),
                 // Evaporate
                 step: Chance {
                     to: Set([Steam::id()]),
@@ -72,8 +72,8 @@ impl Behavior for Water {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                open: [Air::id(), Self::id()],
-                drag: [Sand::id(), Seed::id()],
+                open: Any([Air::id(), Self::id()]),
+                drag: Any([Sand::id()]),
             },
             // Move laterally
             Choose {
@@ -84,7 +84,7 @@ impl Behavior for Water {
                         EdgeDirection::POINTY_BOTTOM_LEFT,
                         EdgeDirection::POINTY_BOTTOM_RIGHT,
                     ],
-                    open: [Air::id()],
+                    open: Any([Air::id()]),
                     distance: 5,
                     collide: true,
                 },
@@ -95,7 +95,7 @@ impl Behavior for Water {
                         EdgeDirection::POINTY_BOTTOM_LEFT,
                         EdgeDirection::POINTY_BOTTOM_RIGHT,
                     ],
-                    open: [Air::id(), Self::id()],
+                    open: Any([Air::id(), Self::id()]),
                     distance: 5,
                     collide: true,
                 },

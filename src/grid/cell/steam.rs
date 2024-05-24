@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::EdgeDirection;
 
 use super::*;
-use crate::behavior::*;
+use crate::behavior::{StateQuery::*, *};
 
 #[derive(UniqueTypeId)]
 #[UniqueTypeIdType = "u8"]
@@ -28,16 +28,16 @@ impl Behavior for Steam {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                [Air::id(), Water::id()],
+                Any([Air::id(), Water::id()]),
             ),
             // Move laterally.
             RandomSwap::adjacent(
                 [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                [Air::id(), Water::id(), Fire::id()],
+                Any([Air::id(), Water::id(), Fire::id()]),
             ),
             // Another larger chance to condense when not moving
             Near::some_adjacent(
-                [Steam::id()],
+                Any([Steam::id()]),
                 5,
                 Chance {
                     to: Set([Water::id()]),

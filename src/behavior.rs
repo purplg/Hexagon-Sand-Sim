@@ -12,6 +12,33 @@ pub type StateId = TypeId<u8>;
 
 type States<const C: usize> = [StateId; C];
 
+#[derive(Debug)]
+pub enum StateQuery<const S: usize> {
+    Any(States<S>),
+    Except(States<S>),
+}
+
+impl<const S: usize> StateQuery<S> {
+    pub fn get(&self, index: usize) -> Option<StateId> {
+        match self {
+            StateQuery::Any(states) | StateQuery::Except(states) => states.get(index).copied(),
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = StateId> {
+        match self {
+            StateQuery::Any(states) | StateQuery::Except(states) => (*states).into_iter(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            StateQuery::Any(states) => states.len(),
+            StateQuery::Except(states) => states.len(),
+        }
+    }
+}
+
 type Directions<const C: usize> = [EdgeDirection; C];
 
 /// A mutation of the board caused by a single cell.
@@ -62,6 +89,14 @@ impl Step for Noop {
     }
 }
 
+pub struct QueryTest<const S: usize>(pub StateQuery<S>);
+
+impl<const S: usize> Step for QueryTest<S> {
+    fn apply(self, _hex: Hex, _states: &BoardState, _rng: f32) -> Option<BoardSlice> {
+        None
+    }
+}
+
 /// Fall off the screen.
 ///
 /// If this cell on touching the edge of a screen in any of the
@@ -93,7 +128,7 @@ impl<const D: usize> Debug for Offscreen<D> {
 #[derive(Debug)]
 pub struct Infect<const D: usize, const O: usize, const I: usize> {
     pub directions: Directions<D>,
-    pub open: States<O>,
+    pub open: StateQuery<O>,
     pub into: States<I>,
 }
 
@@ -101,10 +136,9 @@ impl<const D: usize, const O: usize, const I: usize> Step for Infect<D, O, I> {
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         let i = (rng * self.directions.len() as f32) as usize;
         let to = hex.neighbor(self.directions[i]);
-        if states.is_state(to, self.open) {
+        if states.is_state(to, &self.open) {
             let i = (rng * self.into.len() as f32) as usize;
-            let id = self.into[i];
-            Some(BoardSlice(vec![(to, id)]))
+            self.into.get(i).map(|id| BoardSlice(vec![(to, *id)]))
         } else {
             None
         }
@@ -115,7 +149,7 @@ impl<const D: usize, const O: usize, const I: usize> Step for Infect<D, O, I> {
 #[derive(Debug)]
 pub struct Annihilate<const D: usize, const O: usize, const I: usize> {
     pub directions: Directions<D>,
-    pub open: States<O>,
+    pub open: StateQuery<O>,
     pub into: States<I>,
 }
 
@@ -123,10 +157,11 @@ impl<const D: usize, const O: usize, const I: usize> Step for Annihilate<D, O, I
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         let i = (rng * self.directions.len() as f32) as usize;
         let to = hex.neighbor(self.directions[i]);
-        if states.is_state(to, self.open) {
+        if states.is_state(to, &self.open) {
             let i = (rng * self.into.len() as f32) as usize;
-            let id = self.into[i];
-            Some(BoardSlice(vec![(hex, id), (to, id)]))
+            self.into
+                .get(i)
+                .map(|id| BoardSlice(vec![(hex, *id), (to, *id)]))
         } else {
             None
         }
@@ -137,8 +172,8 @@ impl<const D: usize, const O: usize, const I: usize> Step for Annihilate<D, O, I
 #[derive(Debug)]
 pub struct Drag<const DIR: usize, const O: usize, const D: usize> {
     pub directions: Directions<DIR>,
-    pub open: States<O>,
-    pub drag: States<D>,
+    pub open: StateQuery<O>,
+    pub drag: StateQuery<D>,
 }
 
 impl<const DIR: usize, const O: usize, const D: usize> Step for Drag<DIR, O, D> {
@@ -150,7 +185,7 @@ impl<const DIR: usize, const O: usize, const D: usize> Step for Drag<DIR, O, D> 
         let dir = to.main_direction_to(from);
         let drag = from.neighbor(dir);
         let drag_id = *states.get_current(drag)?;
-        if states.is_state(drag, self.drag) {
+        if states.is_state(drag, &self.drag) {
             Some(BoardSlice(vec![
                 (from, drag_id),
                 (to, from_id),
@@ -307,7 +342,7 @@ impl<'a> Step for Message<'a> {
 
 #[derive(Debug)]
 pub struct MaybeNear<const S: usize, O: Step, X: Step> {
-    states: States<S>,
+    states: StateQuery<S>,
     range: u32,
     count: usize,
     then: O,
@@ -317,17 +352,17 @@ pub struct MaybeNear<const S: usize, O: Step, X: Step> {
 impl<const S: usize, O: Step, X: Step> Step for MaybeNear<S, O, X> {
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         let mut satisfied = 0;
-        for state in self.states {
+        for state in self.states.iter() {
             if hex
                 .xrange(self.range)
-                .filter(|hex| states.is_state(*hex, [state]))
+                .filter(|hex| states.is_state(*hex, &StateQuery::Any([state])))
                 .count()
                 >= self.count
             {
                 satisfied += 1;
             }
         }
-        let count = self.states.into_iter().count();
+        let count = self.states.len();
         if satisfied == count {
             self.then.apply(hex, states, rng)
         } else {
@@ -337,7 +372,7 @@ impl<const S: usize, O: Step, X: Step> Step for MaybeNear<S, O, X> {
 }
 
 impl<const S: usize, O: Step, X: Step> MaybeNear<S, O, X> {
-    pub fn new(states: States<S>, range: u32, count: usize, then: O, otherwise: X) -> Self {
+    pub fn new(states: StateQuery<S>, range: u32, count: usize, then: O, otherwise: X) -> Self {
         Self {
             states,
             range,
@@ -347,7 +382,7 @@ impl<const S: usize, O: Step, X: Step> MaybeNear<S, O, X> {
         }
     }
 
-    pub fn any_adjacent(states: States<S>, then: O, otherwise: X) -> Self {
+    pub fn any_adjacent(states: StateQuery<S>, then: O, otherwise: X) -> Self {
         Self {
             states,
             range: 1,
@@ -357,7 +392,7 @@ impl<const S: usize, O: Step, X: Step> MaybeNear<S, O, X> {
         }
     }
 
-    pub fn any(states: States<S>, range: u32, then: O, otherwise: X) -> Self {
+    pub fn any(states: StateQuery<S>, range: u32, then: O, otherwise: X) -> Self {
         Self {
             states,
             range,
@@ -367,7 +402,7 @@ impl<const S: usize, O: Step, X: Step> MaybeNear<S, O, X> {
         }
     }
 
-    pub fn some_adjacent(states: States<S>, count: usize, then: O, otherwise: X) -> Self {
+    pub fn some_adjacent(states: StateQuery<S>, count: usize, then: O, otherwise: X) -> Self {
         Self {
             states,
             range: 1,
@@ -385,7 +420,7 @@ pub struct Near;
 impl Near {
     #[allow(clippy::new_ret_no_self)]
     pub fn new<const S: usize, O: Step>(
-        states: States<S>,
+        states: StateQuery<S>,
         range: u32,
         count: usize,
         then: O,
@@ -394,14 +429,14 @@ impl Near {
     }
 
     pub fn any_adjacent<const S: usize, O: Step>(
-        states: States<S>,
+        states: StateQuery<S>,
         then: O,
     ) -> MaybeNear<S, O, Noop> {
         MaybeNear::any_adjacent(states, then, Noop)
     }
 
     pub fn any<const S: usize, O: Step>(
-        states: States<S>,
+        states: StateQuery<S>,
         range: u32,
         then: O,
     ) -> MaybeNear<S, O, Noop> {
@@ -409,7 +444,7 @@ impl Near {
     }
 
     pub fn some_adjacent<const S: usize, O: Step>(
-        states: States<S>,
+        states: StateQuery<S>,
         count: usize,
         then: O,
     ) -> MaybeNear<S, O, Noop> {
@@ -424,7 +459,7 @@ pub struct NotNear;
 impl NotNear {
     #[allow(clippy::new_ret_no_self)]
     pub fn new<const S: usize, X: Step>(
-        states: States<S>,
+        states: StateQuery<S>,
         range: u32,
         count: usize,
         then: X,
@@ -433,14 +468,14 @@ impl NotNear {
     }
 
     pub fn any_adjacent<const S: usize, X: Step>(
-        states: States<S>,
+        states: StateQuery<S>,
         then: X,
     ) -> MaybeNear<S, Noop, X> {
         MaybeNear::any_adjacent(states, Noop, then)
     }
 
     pub fn any<const S: usize, X: Step>(
-        states: States<S>,
+        states: StateQuery<S>,
         range: u32,
         then: X,
     ) -> MaybeNear<S, Noop, X> {
@@ -448,7 +483,7 @@ impl NotNear {
     }
 
     pub fn some_adjacent<const S: usize, X: Step>(
-        states: States<S>,
+        states: StateQuery<S>,
         count: usize,
         then: X,
     ) -> MaybeNear<S, Noop, X> {
@@ -544,12 +579,12 @@ where
 
 /// Try to swap with another cell `with_state` in some random `direction`.
 #[derive(Debug)]
-pub struct RandomSwap<const D: usize, const S: usize> {
+pub struct RandomSwap<const D: usize, const O: usize> {
     /// The directions that are available to move in.
     pub directions: Directions<D>,
 
     /// States that are available to swap with.
-    pub open: States<S>,
+    pub open: StateQuery<O>,
 
     /// Max distance to move away from the start position.
     pub distance: i32,
@@ -558,8 +593,8 @@ pub struct RandomSwap<const D: usize, const S: usize> {
     pub collide: bool,
 }
 
-impl<const D: usize, const S: usize> RandomSwap<D, S> {
-    pub fn adjacent(directions: Directions<D>, open: States<S>) -> Self {
+impl<const D: usize, const O: usize> RandomSwap<D, O> {
+    pub fn adjacent(directions: Directions<D>, open: StateQuery<O>) -> Self {
         Self {
             directions,
             open,
@@ -569,7 +604,7 @@ impl<const D: usize, const S: usize> RandomSwap<D, S> {
     }
 }
 
-impl<const D: usize, const S: usize> Step for RandomSwap<D, S> {
+impl<const D: usize, const O: usize> Step for RandomSwap<D, O> {
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         let i = (rng * self.directions.len() as f32) as usize;
         let direction = self.directions[i];
@@ -597,7 +632,7 @@ impl<const D: usize, const S: usize> Step for RandomSwap<D, S> {
     }
 }
 
-impl<const D: usize, const S: usize> RandomSwap<D, S> {
+impl<const D: usize, const O: usize> RandomSwap<D, O> {
     fn in_direction(
         &self,
         from: Hex,
@@ -608,7 +643,7 @@ impl<const D: usize, const S: usize> RandomSwap<D, S> {
         let from_id = *states.get_current(from).unwrap();
         let to = from + direction * distance;
         if let Some(components) = states
-            .find_state(to, self.open)
+            .find_state(to, &self.open)
             .map(|to_id| ((from, to_id), (to, from_id)))
         {
             return Some(components);
@@ -638,16 +673,15 @@ impl Step for Swap {
 
 /// Set the state of a cell
 #[derive(Debug)]
-pub struct Set<const I: usize>(pub States<I>);
+pub struct Set<const S: usize>(pub [StateId; S]);
 
-impl<const I: usize> Step for Set<I> {
+impl<const S: usize> Step for Set<S> {
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
         if states.any_set([hex]) {
             None
         } else {
             let i = (rng * self.0.len() as f32) as usize;
-            let id = self.0[i];
-            Some(BoardSlice(vec![(hex, id)]))
+            self.0.get(i).map(|id| BoardSlice(vec![(hex, *id)]))
         }
     }
 }
@@ -655,8 +689,8 @@ impl<const I: usize> Step for Set<I> {
 /// Apply `then` while a path is `walkable` to `goal`.
 #[derive(Debug)]
 pub struct WhileConnected<const W: usize, const G: usize, S: Step> {
-    pub walkable: States<W>,
-    pub goal: States<G>,
+    pub walkable: StateQuery<W>,
+    pub goal: StateQuery<G>,
     pub then: S,
 }
 
@@ -671,10 +705,10 @@ impl<const W: usize, const G: usize, S: Step> Step for WhileConnected<W, G, S> {
                     .into_iter()
                     // Only on walkable states
                     .filter(|(hex, _weight)| {
-                        states.is_state(*hex, self.walkable) || states.is_state(*hex, self.goal)
+                        states.is_state(*hex, &self.walkable) || states.is_state(*hex, &self.goal)
                     })
             },
-            |hex| states.is_state(*hex, self.goal),
+            |hex| states.is_state(*hex, &self.goal),
         )
         .map(|_| self.then.apply(start, states, rng))?
     }
@@ -684,7 +718,7 @@ impl<const W: usize, const G: usize, S: Step> Step for WhileConnected<W, G, S> {
 #[derive(Debug)]
 pub struct NextTo<const D: usize, const N: usize, S: Step> {
     pub directions: Directions<D>,
-    pub next: States<N>,
+    pub next: StateQuery<N>,
     pub step: S,
 }
 
@@ -693,7 +727,7 @@ impl<const D: usize, const N: usize, S: Step> Step for NextTo<D, N, S> {
         if self
             .directions
             .into_iter()
-            .any(|direction| states.is_state(hex.neighbor(direction), self.next))
+            .any(|direction| states.is_state(hex.neighbor(direction), &self.next))
         {
             self.step.apply(hex, states, rng)
         } else {

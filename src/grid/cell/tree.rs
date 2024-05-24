@@ -5,10 +5,7 @@ use std::fmt::Debug;
 use unique_type_id::UniqueTypeId;
 
 use super::*;
-use crate::behavior::{
-    AssertFn, Chance, Choose, Infect, Near, NextTo, NotNear, RandomSwap, Set, Step, When,
-    WhileConnected,
-};
+use crate::behavior::{StateQuery::*, *};
 
 const BROWN: Color = Color::Rgba {
     red: 0.47,
@@ -34,7 +31,7 @@ impl Behavior for Seed {
         (
             // Only attempt to grow when Sand or Water are nearby.
             Near::any_adjacent(
-                [Sand::id(), Water::id()],
+                Any([Sand::id(), Water::id()]),
                 Chance {
                     to: Set([Sapling::id()]),
                     chance: 1.,
@@ -46,7 +43,7 @@ impl Behavior for Seed {
                     EdgeDirection::POINTY_BOTTOM_LEFT,
                     EdgeDirection::POINTY_BOTTOM_RIGHT,
                 ],
-                [Air::id(), Wind::id(), Steam::id(), Water::id()],
+                Any([Air::id(), Wind::id(), Steam::id(), Water::id()]),
             ),
         )
     }
@@ -67,30 +64,30 @@ impl Behavior for Sapling {
         // Branch when no sand nearby, try to start branching
         (
             WhileConnected {
-                walkable: [Self::id(), Trunk::id(), DeadTrunk::id()],
-                goal: [Sand::id()],
+                walkable: Any([Self::id(), Trunk::id(), DeadTrunk::id()]),
+                goal: Any([Sand::id()]),
                 then: (
                     // If next to Sand or Dead, change to Trunk
                     Near::any_adjacent(
-                        [Self::id()],
-                        Near::any_adjacent([Sand::id(), DeadTrunk::id()], Set([Trunk::id()])),
+                        Any([Self::id()]),
+                        Near::any_adjacent(Any([Sand::id(), DeadTrunk::id()]), Set([Trunk::id()])),
                     ),
                     // If next some trunks, turn into a trunk
-                    Near::any_adjacent([Self::id(), Trunk::id()], Set([Trunk::id()])),
+                    Near::any_adjacent(Any([Self::id(), Trunk::id()]), Set([Trunk::id()])),
                     // Otherwise, try to grow
                     NextTo {
                         directions: [
                             EdgeDirection::POINTY_TOP_LEFT,
                             EdgeDirection::POINTY_TOP_RIGHT,
                         ],
-                        next: [Air::id(), Water::id()],
+                        next: Any([Air::id(), Water::id()]),
                         // Try to grow
                         step: Infect {
                             directions: [
                                 EdgeDirection::POINTY_TOP_LEFT,
                                 EdgeDirection::POINTY_TOP_RIGHT,
                             ],
-                            open: [Air::id(), Sand::id(), Water::id()],
+                            open: Any([Air::id(), Sand::id(), Water::id()]),
                             into: [Self::id()],
                         },
                     },
@@ -115,11 +112,15 @@ impl StateInfo for Trunk {
 impl Behavior for Trunk {
     fn tick(&self) -> impl Step {
         (
-            Near::any([Sand::id(), DeadTrunk::id()], 5, Set([DeadTrunk::id()])),
-            Near::any([Sand::id()], 5, AssertFn(|| false)),
+            Near::any(
+                Any([Sand::id(), DeadTrunk::id()]),
+                5,
+                Set([DeadTrunk::id()]),
+            ),
+            Near::any(Any([Sand::id()]), 5, AssertFn(|| false)),
             Choose::half(
-                NotNear::any([BranchLeft::id()], 4, Set([BranchLeft::id()])),
-                NotNear::any([BranchRight::id()], 4, Set([BranchRight::id()])),
+                NotNear::any(Any([BranchLeft::id()]), 4, Set([BranchLeft::id()])),
+                NotNear::any(Any([BranchRight::id()]), 4, Set([BranchRight::id()])),
             ),
         )
     }
@@ -148,19 +149,19 @@ impl Step for Branch {
         (
             // When next to other tree components, just stop doing anything.
             Near::some_adjacent(
-                [
+                Any([
                     BranchLeft::id(),
                     BranchRight::id(),
                     DeadTrunk::id(),
                     Trunk::id(),
                     Twig::id(),
-                ],
+                ]),
                 2,
                 Set([DeadTrunk::id()]),
             ),
             // When near other branches, also stop doing anything
             Near::any(
-                [BranchLeft::id(), BranchRight::id()],
+                Any([BranchLeft::id(), BranchRight::id()]),
                 25,
                 Set([DeadTrunk::id()]),
             ),
@@ -168,16 +169,18 @@ impl Step for Branch {
             Choose {
                 // Grow
                 a: When(
-                    |hex, states, _rng| states.is_state(hex.neighbor(self.direction), [Air::id()]),
+                    |hex, states, _rng| {
+                        states.is_state(hex.neighbor(self.direction), &Any([Air::id()]))
+                    },
                     Infect {
                         directions: [self.direction],
-                        open: [
+                        open: Any([
                             Air::id(),
                             Sand::id(),
                             Water::id(),
                             Sapling::id(),
                             Seed::id(),
-                        ],
+                        ]),
                         into: [self.grow_into],
                     },
                 ),
@@ -241,7 +244,7 @@ impl Behavior for Twig {
             chance: 0.1,
             to: Infect {
                 directions: EdgeDirection::ALL_DIRECTIONS,
-                open: [Air::id()],
+                open: Any([Air::id()]),
                 into: [Leaf::id()],
             },
         }
@@ -260,18 +263,18 @@ impl StateInfo for Leaf {
 impl Behavior for Leaf {
     fn tick(&self) -> impl Step {
         WhileConnected {
-            walkable: [Self::id(), Trunk::id(), DeadTrunk::id()],
-            goal: [Sand::id()],
+            walkable: Any([Self::id(), Trunk::id(), DeadTrunk::id()]),
+            goal: Any([Sand::id()]),
             then: (
                 Near::new(
-                    [Self::id()],
+                    Any([Self::id()]),
                     20,
                     50,
                     (
                         Chance {
                             to: Infect {
                                 directions: EdgeDirection::ALL_DIRECTIONS,
-                                open: [Air::id()],
+                                open: Any([Air::id()]),
                                 into: [Wind::id()],
                             },
                             chance: 0.01,
@@ -280,12 +283,12 @@ impl Behavior for Leaf {
                     ),
                 ),
                 Near::new(
-                    [Twig::id()],
+                    Any([Twig::id()]),
                     5,
                     1,
                     Infect {
                         directions: EdgeDirection::ALL_DIRECTIONS,
-                        open: [Air::id()],
+                        open: Any([Air::id()]),
                         into: [Self::id()],
                     },
                 ),

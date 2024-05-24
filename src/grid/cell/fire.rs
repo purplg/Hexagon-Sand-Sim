@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use hexx::EdgeDirection;
 
 use super::*;
-use crate::behavior::*;
+use crate::behavior::{StateQuery::*, *};
 
 #[derive(UniqueTypeId)]
 #[UniqueTypeIdType = "u8"]
@@ -20,6 +20,7 @@ impl StateInfo for Fire {
 impl Behavior for Fire {
     fn tick(&self) -> impl Step {
         (
+            QueryTest(Any([Air::id()])),
             Chance {
                 to: Set([Air::id()]),
                 chance: 0.1,
@@ -27,7 +28,7 @@ impl Behavior for Fire {
             Chance {
                 to: Infect {
                     directions: EdgeDirection::ALL_DIRECTIONS,
-                    open: [
+                    open: Any([
                         Seed::id(),
                         Sapling::id(),
                         Trunk::id(),
@@ -36,7 +37,7 @@ impl Behavior for Fire {
                         BranchRight::id(),
                         Twig::id(),
                         Leaf::id(),
-                    ],
+                    ]),
                     into: [Ember::id()],
                 },
                 chance: 0.5,
@@ -48,7 +49,7 @@ impl Behavior for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                open: [Water::id()],
+                open: Any([Water::id()]),
                 into: [Steam::id()],
             },
             RandomSwap::adjacent(
@@ -58,7 +59,7 @@ impl Behavior for Fire {
                     EdgeDirection::POINTY_TOP_LEFT,
                     EdgeDirection::POINTY_TOP_RIGHT,
                 ],
-                [Air::id(), Water::id(), Steam::id(), Sand::id()],
+                Any([Air::id(), Water::id(), Steam::id(), Sand::id()]),
             ),
         )
     }
@@ -92,7 +93,7 @@ impl Behavior for Ember {
             Chance {
                 to: Infect {
                     directions: EdgeDirection::ALL_DIRECTIONS,
-                    open: [
+                    open: Any([
                         Seed::id(),
                         Sapling::id(),
                         Trunk::id(),
@@ -101,19 +102,19 @@ impl Behavior for Ember {
                         BranchRight::id(),
                         Twig::id(),
                         Leaf::id(),
-                    ],
+                    ]),
                     into: [Self::id()],
                 },
                 chance: 0.5,
             },
             Infect {
                 directions: EdgeDirection::ALL_DIRECTIONS,
-                open: [Air::id()],
+                open: Any([Air::id()]),
                 into: [Fire::id()],
             },
             Annihilate {
                 directions: EdgeDirection::ALL_DIRECTIONS,
-                open: [Water::id()],
+                open: Any([Water::id()]),
                 into: [Steam::id()],
             },
         )

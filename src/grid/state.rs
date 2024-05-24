@@ -5,7 +5,7 @@ use bytebuffer::ByteBuffer;
 use hexx::*;
 use unique_type_id::UniqueTypeId as _;
 
-use crate::behavior::StateId;
+use crate::behavior::{StateId, StateQuery};
 
 use super::{cell::BoardSlice, Air};
 
@@ -98,23 +98,22 @@ impl BoardState {
     }
 
     /// Return `true` if a `hex` has one of `state`.
-    pub fn is_state(&self, hex: Hex, state: impl IntoIterator<Item = StateId>) -> bool {
-        self.get_next(hex)
-            .map(|id| state.into_iter().any(|other_id| id == other_id))
-            .unwrap_or(false)
+    pub fn is_state<const S: usize>(&self, hex: Hex, query: &StateQuery<S>) -> bool {
+        match query {
+            StateQuery::Any(states) => self
+                .get_next(hex)
+                .map(|id| states.iter().any(|other_id| &id == other_id))
+                .unwrap_or(false),
+            StateQuery::Except(states) => self
+                .get_next(hex)
+                .map(|id| states.iter().all(|other_id| &id != other_id))
+                .unwrap_or(false),
+        }
     }
 
-    pub fn find_state(
-        &self,
-        hex: Hex,
-        state: impl IntoIterator<Item = impl Into<StateId>>,
-    ) -> Option<StateId> {
-        self.get_next(hex).and_then(|id| {
-            state
-                .into_iter()
-                .map(Into::into)
-                .find(|other_id| &id == other_id)
-        })
+    pub fn find_state<const S: usize>(&self, hex: Hex, query: &StateQuery<S>) -> Option<StateId> {
+        self.get_next(hex)
+            .and_then(|id| query.iter().find(|other_id| &id == other_id))
     }
 
     /// Set the future state of a cell.
