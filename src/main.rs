@@ -7,8 +7,10 @@ mod ui;
 
 use bevy::prelude::*;
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
+use grid::cell::Air;
 use input::Input;
 use leafwing_input_manager::plugin::InputManagerPlugin;
+use unique_type_id::UniqueTypeId as _;
 
 #[derive(
     States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect, Resource, InspectorOptions,
@@ -53,7 +55,11 @@ fn main() {
     app.add_plugins(camera::Plugin);
     app.add_plugins(input::Plugin);
     app.add_plugins(grid::Plugin::new(100));
-    app.add_plugins(ui::Plugin);
+    app.add_plugins(ui::Plugin {
+        initial_selected: Air::id(),
+        initial_brush_size: 1,
+        ..default()
+    });
 
     #[cfg(feature = "fps")]
     app.add_plugins(bevy_fps_counter::FpsCounterPlugin);

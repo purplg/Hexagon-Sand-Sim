@@ -11,32 +11,50 @@ use bevy_inspector_egui::{
     inspector_options::ReflectInspectorOptions,
     DefaultInspectorConfigPlugin, InspectorOptions,
 };
-use unique_type_id::UniqueTypeId as _;
+use unique_type_id::UniqueTypeId;
 
 use crate::{
     behavior::StateId,
     grid::{
-        self, cell::{Air, CellRegistry}, BoardState, FlushEvent, TickRate
+        self,
+        cell::{Air, CellRegistry},
+        BoardState, FlushEvent, TickRate,
     },
     GameEvent, SimState,
 };
 
 static EMPTY_NAME: Cow<'static, str> = Cow::Owned(String::new());
 
-pub(super) struct Plugin;
+pub(super) struct Plugin {
+    pub initial_selected: StateId,
+    pub initial_brush_size: u32,
+    pub initial_save_location: String,
+}
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Palette {
-            selected: Air::id(),
-            brush_size: 1,
-        });
-        app.init_resource::<Tooltip>();
-        app.insert_resource(SaveLocation("/tmp/test".into()));
         app.add_plugins(EguiPlugin);
         app.add_plugins(DefaultInspectorConfigPlugin);
+
+        app.init_resource::<Tooltip>();
+        app.insert_resource(Palette {
+            selected: self.initial_selected,
+            brush_size: self.initial_brush_size,
+        });
+
+        app.insert_resource(SaveLocation(Cow::Owned(self.initial_save_location.clone())));
         app.add_systems(Update, update_system);
         app.add_systems(Update, tooltip_system);
+    }
+}
+
+impl Default for Plugin {
+    fn default() -> Self {
+        Self {
+            initial_selected: Air::id(),
+            initial_brush_size: 1,
+            initial_save_location: "/tmp/sandsim".into(),
+        }
     }
 }
 
