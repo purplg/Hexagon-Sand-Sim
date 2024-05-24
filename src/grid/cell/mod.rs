@@ -4,25 +4,26 @@ mod fire;
 pub use fire::{Ember, Fire};
 mod sand;
 pub use sand::Sand;
-mod water;
-use unique_type_id::UniqueTypeId;
-pub use water::Water;
 mod steam;
 pub use steam::Steam;
-mod wind;
-pub use wind::Wind;
 mod stone;
 pub use stone::Stone;
 mod tree;
-pub use tree::*;
-
-use std::borrow::Cow;
+pub use tree::{BranchLeft, BranchRight, DeadTrunk, Leaf, Sapling, Seed, Trunk, Twig};
+mod water;
+pub use water::Water;
+mod wind;
+pub use wind::Wind;
 
 use crate::behavior::{Noop, StateId, Step};
 use crate::grid::BoardState;
+
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use hexx::Hex;
+use unique_type_id::UniqueTypeId;
+
+use std::borrow::Cow;
 
 pub struct Plugin;
 
@@ -30,21 +31,21 @@ impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         let mut registry = CellRegistry::default();
         registry.add(Air);
+        registry.add(Ember);
         registry.add(Fire);
         registry.add(Sand);
-        registry.add(Water);
         registry.add(Steam);
         registry.add(Stone);
-        registry.add(Wind);
-        registry.add(Seed);
-        registry.add(DeadTrunk);
-        registry.add(Trunk);
         registry.add(BranchLeft);
         registry.add(BranchRight);
+        registry.add(DeadTrunk);
         registry.add(Leaf);
         registry.add(Sapling);
+        registry.add(Seed);
+        registry.add(Trunk);
         registry.add(Twig);
-        registry.add(Ember);
+        registry.add(Water);
+        registry.add(Wind);
         app.insert_resource(registry);
     }
 }
