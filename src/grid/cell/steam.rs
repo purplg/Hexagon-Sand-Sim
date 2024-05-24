@@ -22,11 +22,6 @@ impl StateInfo for Steam {
 impl Behavior for Steam {
     fn tick(&self) -> impl Step {
         (
-            // Condense
-            Chance {
-                to: Set([Water::id()]),
-                chance: 0.1,
-            },
             // Move up
             RandomSwap::adjacent(
                 [
@@ -39,6 +34,15 @@ impl Behavior for Steam {
             RandomSwap::adjacent(
                 [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
                 [Air::id(), Water::id(), Fire::id()],
+            ),
+            // Another larger chance to condense when not moving
+            Near::some_adjacent(
+                [Steam::id()],
+                5,
+                Chance {
+                    to: Set([Water::id()]),
+                    chance: 0.01,
+                },
             ),
         )
     }

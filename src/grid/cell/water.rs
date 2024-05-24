@@ -25,30 +25,14 @@ impl StateInfo for Water {
             alpha: -0.2,
         },
         speed: Vec2::X,
-        scale: Vec2::splat(0.02),
+        scale: Vec2::splat(0.2),
     };
     const HIDDEN: bool = false;
 }
 impl Behavior for Water {
     fn tick(&self) -> impl Step {
         (
-            // Evaporate
-            Chance {
-                to: Set([Steam::id()]),
-                chance: 0.001,
-            },
-            // Drag sand
-            Drag {
-                directions: [
-                    EdgeDirection::POINTY_LEFT,
-                    EdgeDirection::POINTY_RIGHT,
-                    EdgeDirection::POINTY_BOTTOM_LEFT,
-                    EdgeDirection::POINTY_BOTTOM_RIGHT,
-                ],
-                open: [Air::id(), Self::id()],
-                drag: [Sand::id(), Seed::id()],
-            },
-            // Move down
+            // Gravity
             RandomSwap::adjacent(
                 [
                     EdgeDirection::POINTY_BOTTOM_LEFT,
@@ -67,17 +51,51 @@ impl Behavior for Water {
                     [Sand::id()],
                 ),
             },
+            // Below air
+            NextTo {
+                directions: [
+                    EdgeDirection::POINTY_TOP_LEFT,
+                    EdgeDirection::POINTY_TOP_RIGHT,
+                ],
+                next: [Air::id()],
+                // Evaporate
+                step: Chance {
+                    to: Set([Steam::id()]),
+                    chance: 0.001,
+                },
+            },
+            // Drag things
+            Drag {
+                directions: [
+                    EdgeDirection::POINTY_LEFT,
+                    EdgeDirection::POINTY_RIGHT,
+                    EdgeDirection::POINTY_BOTTOM_LEFT,
+                    EdgeDirection::POINTY_BOTTOM_RIGHT,
+                ],
+                open: [Air::id(), Self::id()],
+                drag: [Sand::id(), Seed::id()],
+            },
             // Move laterally
             Choose {
                 a: RandomSwap {
-                    directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
+                    directions: [
+                        EdgeDirection::POINTY_LEFT,
+                        EdgeDirection::POINTY_RIGHT,
+                        EdgeDirection::POINTY_BOTTOM_LEFT,
+                        EdgeDirection::POINTY_BOTTOM_RIGHT,
+                    ],
                     open: [Air::id()],
                     distance: 5,
                     collide: true,
                 },
                 b: RandomSwap {
-                    directions: [EdgeDirection::POINTY_LEFT, EdgeDirection::POINTY_RIGHT],
-                    open: [Air::id(), Water::id()],
+                    directions: [
+                        EdgeDirection::POINTY_LEFT,
+                        EdgeDirection::POINTY_RIGHT,
+                        EdgeDirection::POINTY_BOTTOM_LEFT,
+                        EdgeDirection::POINTY_BOTTOM_RIGHT,
+                    ],
+                    open: [Air::id(), Self::id()],
                     distance: 5,
                     collide: true,
                 },
