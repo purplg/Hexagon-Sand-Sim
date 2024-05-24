@@ -351,19 +351,11 @@ pub struct MaybeNear<const S: usize, O: Step, X: Step> {
 
 impl<const S: usize, O: Step, X: Step> Step for MaybeNear<S, O, X> {
     fn apply(self, hex: Hex, states: &BoardState, rng: f32) -> Option<BoardSlice> {
-        let mut satisfied = 0;
-        for state in self.states.iter() {
-            if hex
-                .xrange(self.range)
-                .filter(|hex| states.is_state(*hex, &StateQuery::Any([state])))
-                .count()
-                >= self.count
-            {
-                satisfied += 1;
-            }
-        }
-        let count = self.states.len();
-        if satisfied == count {
+        let count = hex
+            .xrange(self.range)
+            .filter(|hex| states.is_state(*hex, &self.states))
+            .count();
+        if count >= self.count {
             self.then.apply(hex, states, rng)
         } else {
             self.otherwise.apply(hex, states, rng)
