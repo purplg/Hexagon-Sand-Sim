@@ -89,13 +89,6 @@ fn update_system(world: &mut World) {
             }
         });
 
-        // TODO
-        // ui.add_space(16.);
-        // ui.push_id(Id::from("Board"), |ui| {
-        //     ui.heading("Board");
-        //     bevy_inspector::ui_for_resource::<Board>(world, ui);
-        // });
-
         ui.add_space(16.);
         ui.push_id(Id::from("control"), |ui| {
             ui.horizontal_top(|ui| {
