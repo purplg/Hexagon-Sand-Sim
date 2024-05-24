@@ -10,6 +10,8 @@ mod stone;
 pub use stone::Stone;
 mod tree;
 pub use tree::{BranchLeft, BranchRight, DeadTrunk, Leaf, Sapling, Seed, Trunk, Twig};
+mod void;
+pub use void::Void;
 mod water;
 pub use water::Water;
 mod wind;
@@ -44,6 +46,7 @@ impl bevy::prelude::Plugin for Plugin {
         registry.add(Seed);
         registry.add(Trunk);
         registry.add(Twig);
+        registry.add(Void);
         registry.add(Water);
         registry.add(Wind);
         app.insert_resource(registry);
