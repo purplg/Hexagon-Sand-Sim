@@ -43,6 +43,8 @@ fn main() {
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
             title: "Bevy App".to_string(),
+            canvas: Some("#sandsim-canvas".into()),
+            resizable: true,
             ..default()
         }),
         ..default()

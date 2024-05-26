@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <style>
+    html, body {margin:0;height:100%;}
+  </style>
+</head>
+<body>
+  <script type="module">
+    import './restart-audio-context.js'
+    import init from './sandsim.js'
+
+    init().catch((error) => {
+      if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
+        throw error;
+      }
+    });
+  </script>
+  <canvas id="sandsim-canvas" width="800" height="600"></canvas>
+</body>
+
+</html>
