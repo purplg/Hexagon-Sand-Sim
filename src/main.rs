@@ -42,9 +42,8 @@ fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
-            title: "Bevy App".to_string(),
+            title: "Hexagonal Sand Sim".to_string(),
             canvas: Some("#sandsim-canvas".into()),
-            resizable: true,
             ..default()
         }),
         ..default()
