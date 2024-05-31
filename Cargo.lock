@@ -799,6 +799,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_pancam"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6e50ba0b6cf11b847ef589ddc50646880dcb0a316b2653edcf231ef26202b32"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_pbr"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3510,6 +3519,7 @@ dependencies = [
  "bevy",
  "bevy-fps-counter",
  "bevy-inspector-egui",
+ "bevy_pancam",
  "bevy_turborand",
  "bytebuffer",
  "hexx",

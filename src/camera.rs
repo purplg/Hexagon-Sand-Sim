@@ -1,71 +1,21 @@
-use bevy::{
-    prelude::*,
-    window::{CursorGrabMode, PrimaryWindow},
-};
-use leafwing_input_manager::prelude::*;
-
-use crate::input::Input;
+use bevy::prelude::*;
+use bevy_pancam::{PanCam, PanCamPlugin};
 
 pub struct Plugin;
 
 impl bevy::prelude::Plugin for Plugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::rgb(0.01, 0.01, 0.01)));
+        app.add_plugins(PanCamPlugin::default());
         app.add_systems(Startup, setup);
-        app.add_systems(
-            Update,
-            (zoom, pan).run_if(|window: Query<&Window, With<PrimaryWindow>>| {
-                window.single().cursor.grab_mode == CursorGrabMode::Confined
-            }),
-        );
-        app.add_systems(Update, cursor_grab);
     }
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-}
-
-fn cursor_grab(
-    mut window: Query<&mut Window, With<PrimaryWindow>>,
-    input: Query<&ActionState<Input>>,
-) {
-    let mut window = window.single_mut();
-
-    let Ok(state) = input.get_single() else {
-        return;
-    };
-
-    if state.just_pressed(&Input::Grab) {
-        window.cursor.grab_mode = CursorGrabMode::Confined;
-        window.cursor.visible = false;
-    } else if state.just_released(&Input::Grab) {
-        window.cursor.grab_mode = CursorGrabMode::None;
-        window.cursor.visible = true;
-    }
-}
-
-fn zoom(mut query: Query<&mut OrthographicProjection>, input: Query<&ActionState<Input>>) {
-    let mut proj = query.single_mut();
-    let input = input.single();
-    let zoom = input.value(&Input::Zoom);
-    proj.scale -= zoom * 0.1;
-    if proj.scale < 0.1 {
-        proj.scale = 0.1;
-    }
-}
-
-fn pan(
-    mut query: Query<(&mut Transform, &OrthographicProjection), With<Camera>>,
-    input: Query<&ActionState<Input>>,
-    dt: Res<Time>,
-) {
-    let (mut transform, proj) = query.single_mut();
-    let input = input.single();
-    let Some(pan) = input.axis_pair(&Input::Pan) else {
-        return;
-    };
-
-    transform.translation.x -= pan.x() * dt.delta_seconds() * 100. * proj.scale;
-    transform.translation.y += pan.y() * dt.delta_seconds() * 100. * proj.scale;
+    commands.spawn(Camera2dBundle::default()).insert(PanCam {
+        grab_buttons: vec![MouseButton::Right],
+        enabled: true,
+        zoom_to_cursor: true,
+        ..default()
+    });
 }
