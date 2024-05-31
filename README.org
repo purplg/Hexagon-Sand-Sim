@@ -2,6 +2,8 @@
 
 A fun sand simulator using hexagons instead of pixels!
 
+The main repo is on [[https://codeberg.org/purplg/hexagonal-sand-sim][Codeberg]]
+
 This is still a work-in-progress with lots of issues and tons of things to do. I'll probably never "finish" it. Just a fun project.
 
 This sim works by applying patterns every frame. There is no state maintained between frames, with the exception of the board itself, of course, this means things like acceleration can't occur on a single cell.
